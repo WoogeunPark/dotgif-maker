@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const canvasSizeSelect = document.getElementById('canvasSizeSelect');
   const customWidthInput = document.getElementById('customWidth');
   const customHeightInput = document.getElementById('customHeight');
-  const applySizeBtn = document.getElementById('applySize');
   const penToolBtn = document.getElementById('penTool');
   const eraserToolBtn = document.getElementById('eraserTool');
   const clearFrameBtn = document.getElementById('clearFrame');
@@ -203,20 +202,34 @@ document.addEventListener('DOMContentLoaded', () => {
       customWidthInput.focus();
     } else {
       const [width, height] = selectedValue.split('x').map(Number);
-      customWidthInput.value = width * PIXEL_SIZE;
-      customHeightInput.value = height * PIXEL_SIZE;
+      const newWidth = width * PIXEL_SIZE;
+      const newHeight = height * PIXEL_SIZE;
+      customWidthInput.value = newWidth;
+      customHeightInput.value = newHeight;
+      applyCanvasSize(newWidth, newHeight);
     }
   });
 
-  applySizeBtn.addEventListener('click', () => {
-    const newWidth = parseInt(customWidthInput.value);
-    const newHeight = parseInt(customHeightInput.value);
-    if (isNaN(newWidth) || isNaN(newHeight) || newWidth <= 0 || newHeight <= 0) {
-      alert('Please enter valid positive numbers for width and height.');
-      return;
+  function handleCustomSizeChange() {
+    let newWidth = parseInt(customWidthInput.value);
+    let newHeight = parseInt(customHeightInput.value);
+
+    // Enforce 800x800 limit
+    if (newWidth > 800) newWidth = 800;
+    if (newHeight > 800) newHeight = 800;
+
+    customWidthInput.value = newWidth || 0;
+    customHeightInput.value = newHeight || 0;
+
+    if (!isNaN(newWidth) && !isNaN(newHeight) && newWidth > 0 && newHeight > 0) {
+      applyCanvasSize(newWidth, newHeight);
     }
-    applyCanvasSize(newWidth, newHeight);
-  });
+  }
+
+  customWidthInput.addEventListener('blur', handleCustomSizeChange);
+  customHeightInput.addEventListener('blur', handleCustomSizeChange);
+  customWidthInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleCustomSizeChange(); });
+  customHeightInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleCustomSizeChange(); });
 
   penToolBtn.addEventListener('click', () => {
     currentTool = 'pen';
