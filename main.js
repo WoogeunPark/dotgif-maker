@@ -17,6 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const customHeightInput = document.getElementById('customHeight');
   const penToolBtn = document.getElementById('penTool');
   const eraserToolBtn = document.getElementById('eraserTool');
+  const eyedropperToolBtn = document.getElementById('eyedropperTool');
+  const recentColorsContainer = document.getElementById('recentColorsContainer');
   const clearFrameBtn = document.getElementById('clearFrame');
   const undoBtn = document.getElementById('undoBtn');
   const redoBtn = document.getElementById('redoBtn');
@@ -26,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const colorSelectionContainer = document.querySelector('.color-selection');
   const colorPalette = document.querySelector('.color-palette');
   let paletteColors;
+  let recentColors = [];
 
   const PIXEL_SIZE = 10;
   let COLS = canvas.width / PIXEL_SIZE;
@@ -123,11 +126,49 @@ document.addEventListener('DOMContentLoaded', () => {
   function setActiveToolButton(tool) {
     penToolBtn.classList.remove('active');
     eraserToolBtn.classList.remove('active');
-    if (tool === 'pen') {
-      penToolBtn.classList.add('active');
-    } else {
-      eraserToolBtn.classList.add('active');
+    eyedropperToolBtn.classList.remove('active');
+
+    if (tool === 'pen') penToolBtn.classList.add('active');
+    else if (tool === 'eraser') eraserToolBtn.classList.add('active');
+    else if (tool === 'eyedropper') eyedropperToolBtn.classList.add('active');
+
+    updateCursor(tool);
+  }
+
+  function updateCursor(tool) {
+    canvas.classList.remove('pen-cursor', 'eraser-cursor', 'eyedropper-cursor');
+    canvas.classList.add(`${tool}-cursor`);
+  }
+
+  function addToRecentColors(color) {
+    if (!color || color === 'transparent') return;
+
+    // Remove if already exists and add to front
+    recentColors = recentColors.filter(c => c.toLowerCase() !== color.toLowerCase());
+    recentColors.unshift(color);
+
+    // Limit to 4 colors
+    if (recentColors.length > 4) {
+      recentColors.pop();
     }
+
+    renderRecentColors();
+  }
+
+  function renderRecentColors() {
+    recentColorsContainer.innerHTML = '';
+    recentColors.forEach(color => {
+      const swatch = document.createElement('div');
+      swatch.className = 'recent-color';
+      swatch.style.backgroundColor = color;
+      swatch.title = color;
+      swatch.addEventListener('click', () => {
+        currentColor = color;
+        colorPicker.value = color;
+        setActivePaletteColor(color);
+      });
+      recentColorsContainer.appendChild(swatch);
+    });
   }
 
   function clearCurrentFrame() {
@@ -241,22 +282,30 @@ document.addEventListener('DOMContentLoaded', () => {
     setActiveToolButton('eraser');
   });
 
+  eyedropperToolBtn.addEventListener('click', () => {
+    currentTool = 'eyedropper';
+    setActiveToolButton('eyedropper');
+  });
+
+  // Initialize UI
+  setActiveToolButton('pen');
+
   canvas.addEventListener('mousedown', (e) => {
-    console.log('mousedown event triggered.');
     isDrawing = true;
-    saveState();
+    if (currentTool !== 'eyedropper') {
+      saveState();
+      addToRecentColors(currentColor);
+    }
     drawPixel(e);
   });
 
   canvas.addEventListener('mousemove', (e) => {
-    if (isDrawing) {
-      console.log('mousemove event triggered while drawing.');
+    if (isDrawing && currentTool !== 'eyedropper') {
       drawPixel(e);
     }
   });
 
   canvas.addEventListener('mouseup', () => {
-    console.log('mouseup event triggered. isDrawing set to false.');
     isDrawing = false;
   });
   canvas.addEventListener('mouseleave', () => {
@@ -265,15 +314,29 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function drawPixel(e) {
-    console.log('drawPixel called.');
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const col = Math.floor(x / PIXEL_SIZE);
     const row = Math.floor(y / PIXEL_SIZE);
+
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+
+    if (currentTool === 'eyedropper') {
+      const pickedColor = frames[currentFrameIndex][row][col];
+      if (pickedColor && pickedColor !== BACKGROUND_COLOR) {
+        currentColor = pickedColor;
+        colorPicker.value = pickedColor;
+        setActivePaletteColor(pickedColor);
+        // Switch back to pen after picking color
+        currentTool = 'pen';
+        setActiveToolButton('pen');
+      }
+      return;
+    }
+
     const thickness = (currentTool === 'pen') ? currentPenThickness : currentEraserThickness;
     const halfThickness = Math.floor(thickness / 2);
-    console.log(`Drawing at col: ${col}, row: ${row} with color: ${currentColor}`);
 
     for (let rOffset = -halfThickness; rOffset <= halfThickness; rOffset++) {
       for (let cOffset = -halfThickness; cOffset <= halfThickness; cOffset++) {
@@ -281,7 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetCol = col + cOffset;
         if (targetRow >= 0 && targetRow < ROWS && targetCol >= 0 && targetCol < COLS) {
           frames[currentFrameIndex][targetRow][targetCol] = (currentTool === 'pen') ? currentColor : BACKGROUND_COLOR;
-          console.log(`Updated frame[${currentFrameIndex}][${targetRow}][${targetCol}] to ${frames[currentFrameIndex][targetRow][targetCol]}`);
         }
       }
     }

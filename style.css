@@ -87,9 +87,20 @@ canvas {
   background-color: #2a2a2e;
   border-radius: 8px;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
-  cursor: crosshair;
   image-rendering: pixelated;
   border: 4px solid #1c1c21;
+}
+
+canvas.pen-cursor {
+  cursor: crosshair;
+}
+
+canvas.eraser-cursor {
+  cursor: cell;
+}
+
+canvas.eyedropper-cursor {
+  cursor: copy;
 }
 
 .timeline {
@@ -206,6 +217,33 @@ button.active+.tool-inline-settings {
   border-radius: 12px;
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+/* Recent Colors */
+.recent-colors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.recent-colors-grid {
+  display: flex;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.recent-color {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: transform 0.2s;
+}
+
+.recent-color:hover {
+  transform: scale(1.1);
 }
 
 .color-palette {
