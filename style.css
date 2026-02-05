@@ -111,6 +111,16 @@ canvas.eyedropper-cursor {
   padding: 12px 24px;
 }
 
+.color-preview-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #000;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
 button {
   background: var(--bg-card);
   color: var(--text-main);

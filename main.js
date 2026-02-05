@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const eraserToolBtn = document.getElementById('eraserTool');
   const eyedropperToolBtn = document.getElementById('eyedropperTool');
   const recentColorsContainer = document.getElementById('recentColorsContainer');
+  const penColorPreview = document.getElementById('penColorPreview');
   const clearFrameBtn = document.getElementById('clearFrame');
   const undoBtn = document.getElementById('undoBtn');
   const redoBtn = document.getElementById('redoBtn');
@@ -163,9 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       swatch.style.backgroundColor = color;
       swatch.title = color;
       swatch.addEventListener('click', () => {
-        currentColor = color;
-        colorPicker.value = color;
-        setActivePaletteColor(color);
+        updateCurrentColor(color);
       });
       recentColorsContainer.appendChild(swatch);
     });
@@ -175,6 +174,14 @@ document.addEventListener('DOMContentLoaded', () => {
     frames[currentFrameIndex] = createGrid(COLS, ROWS);
     saveState();
     drawGrid();
+  }
+
+  function updateCurrentColor(color) {
+    if (!color || color === 'transparent') return;
+    currentColor = color;
+    colorPicker.value = color;
+    penColorPreview.style.backgroundColor = color;
+    setActivePaletteColor(color);
   }
 
   function setActivePaletteColor(selectedColor) {
@@ -203,11 +210,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  colorPicker.addEventListener('input', (e) => {
+    updateCurrentColor(e.target.value);
+  });
+
   colorPicker.addEventListener('change', (e) => {
-    currentColor = e.target.value;
-    if (colorModeToggle.checked) {
-      paletteColors.forEach(pc => pc.classList.remove('active'));
-    }
+    updateCurrentColor(e.target.value);
     currentTool = 'pen';
     setActiveToolButton('pen');
   });
@@ -215,9 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
   colorPalette.addEventListener('click', (e) => {
     const target = e.target;
     if (target.classList.contains('palette-color')) {
-      currentColor = target.dataset.color;
-      colorPicker.value = currentColor;
-      setActivePaletteColor(currentColor);
+      const color = target.dataset.color;
+      updateCurrentColor(color);
       colorModeToggle.checked = false;
       colorSelectionContainer.dataset.mode = 'palette';
       currentTool = 'pen';
@@ -325,9 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (currentTool === 'eyedropper') {
       const pickedColor = frames[currentFrameIndex][row][col];
       if (pickedColor && pickedColor !== BACKGROUND_COLOR) {
-        currentColor = pickedColor;
-        colorPicker.value = pickedColor;
-        setActivePaletteColor(pickedColor);
+        updateCurrentColor(pickedColor);
         // Switch back to pen after picking color
         currentTool = 'pen';
         setActiveToolButton('pen');
