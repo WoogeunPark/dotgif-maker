@@ -7,8 +7,84 @@
   <link href='/style.css' rel='stylesheet'>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+  <div class="container">
+    <h1>Dot GIF Maker</h1>
+    <div class="controls">
+      <div class="color-selection" data-mode="palette">
+        <div class="color-mode-toggle">
+          <span>Palette</span>
+          <label class="switch">
+            <input type="checkbox" id="colorModeToggle">
+            <span class="slider round"></span>
+          </label>
+          <span>Custom</span>
+        </div>
+        <div class="color-picker-container">
+          <label for="colorPicker">Custom Color:</label>
+          <input type="color" id="colorPicker" value="#000000">
+        </div>
+        <div class="color-palette">
+          <div class="palette-color active" data-color="#000000" style="background-color: #000000;"></div>
+          <div class="palette-color" data-color="#FF0000" style="background-color: #FF0000;"></div>
+          <div class="palette-color" data-color="#00FF00" style="background-color: #00FF00;"></div>
+          <div class="palette-color" data-color="#0000FF" style="background-color: #0000FF;"></div>
+          <div class="palette-color" data-color="#FFFF00" style="background-color: #FFFF00;"></div>
+          <div class="palette-color" data-color="#FF00FF" style="background-color: #FF00FF;"></div>
+          <div class="palette-color" data-color="#00FFFF" style="background-color: #00FFFF;"></div>
+          <div class="palette-color" data-color="#FFFFFF" style="background-color: #FFFFFF;"></div>
+        </div>
+      </div>
+      <div class="tool-controls">
+        <button id="penTool" class="active">Pen</button>
+        <button id="eraserTool">Eraser</button>
+        <div class="tool-setting">
+          <label>Pen Thickness:</label>
+          <div class="thickness-options" id="penThicknessOptions">
+            <input type="radio" id="penThickness1" name="penThickness" value="1" checked><label for="penThickness1">1</label>
+            <input type="radio" id="penThickness3" name="penThickness" value="3"><label for="penThickness3">3</label>
+            <input type="radio" id="penThickness5" name="penThickness" value="5"><label for="penThickness5">5</label>
+          </div>
+        </div>
+        <div class="tool-setting">
+          <label>Eraser Thickness:</label>
+          <div class="thickness-options" id="eraserThicknessOptions">
+            <input type="radio" id="eraserThickness1" name="eraserThickness" value="1" checked><label for="eraserThickness1">1</label>
+            <input type="radio" id="eraserThickness3" name="eraserThickness" value="3"><label for="eraserThickness3">3</label>
+            <input type="radio" id="eraserThickness5" name="eraserThickness" value="5"><label for="eraserThickness5">5</label>
+          </div>
+        </div>
+        <div class="history-controls">
+          <button id="undoBtn">Undo</button>
+          <button id="redoBtn">Redo</button>
+        </div>
+        <button id="clearFrame">Clear Frame</button>
+      </div>
+      <div class="canvas-size-controls">
+        <label for="canvasSizeSelect">Size:</label>
+        <select id="canvasSizeSelect">
+          <option value="32x32">32x32</option>
+          <option value="64x64">64x64</option>
+          <option value="128x128">128x128</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input type="number" id="customWidth" placeholder="Width" value="320" min="10" max="1000" disabled>
+        <input type="number" id="customHeight" placeholder="Height" value="320" min="10" max="1000" disabled>
+        <button id="applySize">Apply Size</button>
+      </div>
+      <div class="frame-controls">
+        <button id="prevFrame">Previous</button>
+        <span id="frameIndicator">1 / 1</span>
+        <button id="nextFrame">Next</button>
+        <button id="addFrame">Add Frame</button>
+        <button id="deleteFrame">Delete Frame</button>
+      </div>
+      <button id="exportGif">Export GIF</button>
+      <button id="previewGif">Preview GIF</button>
+    </div>
+    <canvas id="dotCanvas" width="320" height="320"></canvas>
+    <div id="gifPreview"></div>
+  </div>
+
+  <script defer type="module" src="/main.js"></script>
 </body>
 </html>

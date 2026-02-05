@@ -1,1 +1,388 @@
-// Add JS here
+import { GIFEncoder, quantize, applyPalette } from 'https://unpkg.com/gifenc';
+
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('dotCanvas');
+  const ctx = canvas.getContext('2d');
+  const colorPicker = document.getElementById('colorPicker');
+  const addFrameBtn = document.getElementById('addFrame');
+  const deleteFrameBtn = document.getElementById('deleteFrame');
+  const prevFrameBtn = document.getElementById('prevFrame');
+  const nextFrameBtn = document.getElementById('nextFrame');
+  const frameIndicator = document.getElementById('frameIndicator');
+  const exportGifBtn = document.getElementById('exportGif');
+  const previewGifBtn = document.getElementById('previewGif');
+  const gifPreview = document.getElementById('gifPreview');
+  const canvasSizeSelect = document.getElementById('canvasSizeSelect');
+  const customWidthInput = document.getElementById('customWidth');
+  const customHeightInput = document.getElementById('customHeight');
+  const applySizeBtn = document.getElementById('applySize');
+  const penToolBtn = document.getElementById('penTool');
+  const eraserToolBtn = document.getElementById('eraserTool');
+  const clearFrameBtn = document.getElementById('clearFrame');
+  const undoBtn = document.getElementById('undoBtn');
+  const redoBtn = document.getElementById('redoBtn');
+  const penThicknessOptions = document.getElementById('penThicknessOptions');
+  const eraserThicknessOptions = document.getElementById('eraserThicknessOptions');
+  const colorModeToggle = document.getElementById('colorModeToggle');
+  const colorSelectionContainer = document.querySelector('.color-selection');
+  const colorPalette = document.querySelector('.color-palette');
+  let paletteColors;
+
+  const PIXEL_SIZE = 10;
+  let COLS = canvas.width / PIXEL_SIZE;
+  let ROWS = canvas.height / PIXEL_SIZE;
+
+  let currentColor = colorPicker.value;
+  let isDrawing = false;
+  let frames = [];
+  let history = [];
+  let historyIndex = [];
+  let currentFrameIndex = 0;
+  let currentTool = 'pen';
+  let currentPenThickness = 1;
+  let currentEraserThickness = 1;
+
+  const BACKGROUND_COLOR = '#FFFFFF';
+
+  // --- History Management ---
+  function saveState() {
+    const frameHistory = history[currentFrameIndex];
+    const currentIndex = historyIndex[currentFrameIndex];
+    if (currentIndex < frameHistory.length - 1) {
+      history[currentFrameIndex] = frameHistory.slice(0, currentIndex + 1);
+    }
+    history[currentFrameIndex].push(JSON.parse(JSON.stringify(frames[currentFrameIndex])));
+    historyIndex[currentFrameIndex]++;
+    updateUndoRedoButtons();
+  }
+
+  function undo() {
+    if (historyIndex[currentFrameIndex] > 0) {
+      historyIndex[currentFrameIndex]--;
+      frames[currentFrameIndex] = JSON.parse(JSON.stringify(history[currentFrameIndex][historyIndex[currentFrameIndex]]));
+      drawGrid();
+      updateUndoRedoButtons();
+    }
+  }
+
+  function redo() {
+    if (historyIndex[currentFrameIndex] < history[currentFrameIndex].length - 1) {
+      historyIndex[currentFrameIndex]++;
+      frames[currentFrameIndex] = JSON.parse(JSON.stringify(history[currentFrameIndex][historyIndex[currentFrameIndex]]));
+      drawGrid();
+      updateUndoRedoButtons();
+    }
+  }
+
+  function updateUndoRedoButtons() {
+    undoBtn.disabled = historyIndex[currentFrameIndex] <= 0;
+    redoBtn.disabled = historyIndex[currentFrameIndex] >= history[currentFrameIndex].length - 1;
+  }
+
+  function createGrid(cols, rows) {
+    return Array(rows).fill(null).map(() => Array(cols).fill(BACKGROUND_COLOR));
+  }
+
+  function drawGrid() {
+    console.log('drawGrid called. Clearing canvas.');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const currentGrid = frames[currentFrameIndex];
+    if (!currentGrid) {
+        console.log('No current grid to draw.');
+        return;
+    }
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        ctx.fillStyle = currentGrid[r][c];
+        ctx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+      }
+    }
+    console.log('drawGrid finished drawing pixels.');
+  }
+  
+  function updateFrameIndicator() {
+    frameIndicator.textContent = `${currentFrameIndex + 1} / ${frames.length}`;
+    if (history[currentFrameIndex]) {
+        updateUndoRedoButtons();
+    }
+  }
+
+  function applyCanvasSize(newWidth, newHeight) {
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+    COLS = canvas.width / PIXEL_SIZE;
+    ROWS = canvas.height / PIXEL_SIZE;
+    const initialGrid = createGrid(COLS, ROWS);
+    frames = [JSON.parse(JSON.stringify(initialGrid))];
+    history = [[JSON.parse(JSON.stringify(initialGrid))]];
+    historyIndex = [0];
+    currentFrameIndex = 0;
+    updateFrameIndicator();
+    drawGrid();
+  }
+
+  function setActiveToolButton(tool) {
+    penToolBtn.classList.remove('active');
+    eraserToolBtn.classList.remove('active');
+    if (tool === 'pen') {
+      penToolBtn.classList.add('active');
+    } else {
+      eraserToolBtn.classList.add('active');
+    }
+  }
+
+  function clearCurrentFrame() {
+    frames[currentFrameIndex] = createGrid(COLS, ROWS);
+    saveState();
+    drawGrid();
+  }
+
+  function setActivePaletteColor(selectedColor) {
+    if (!paletteColors) {
+      paletteColors = document.querySelectorAll('.palette-color');
+    }
+    paletteColors.forEach(pc => {
+      if (pc.dataset.color.toLowerCase() === selectedColor.toLowerCase()) {
+        pc.classList.add('active');
+      } else {
+        pc.classList.remove('active');
+      }
+    });
+  }
+
+  // --- Event Listeners ---
+  undoBtn.addEventListener('click', undo);
+  redoBtn.addEventListener('click', redo);
+
+  colorModeToggle.addEventListener('change', (e) => {
+    colorSelectionContainer.dataset.mode = e.target.checked ? 'custom' : 'palette';
+    if (e.target.checked) {
+      colorPicker.value = currentColor;
+    } else {
+      setActivePaletteColor(currentColor);
+    }
+  });
+
+  colorPicker.addEventListener('change', (e) => {
+    currentColor = e.target.value;
+    if (colorModeToggle.checked) {
+      paletteColors.forEach(pc => pc.classList.remove('active'));
+    }
+    currentTool = 'pen';
+    setActiveToolButton('pen');
+  });
+
+  colorPalette.addEventListener('click', (e) => {
+    const target = e.target;
+    if (target.classList.contains('palette-color')) {
+      currentColor = target.dataset.color;
+      colorPicker.value = currentColor;
+      setActivePaletteColor(currentColor);
+      colorModeToggle.checked = false;
+      colorSelectionContainer.dataset.mode = 'palette';
+      currentTool = 'pen';
+      setActiveToolButton('pen');
+    }
+  });
+
+  penThicknessOptions.addEventListener('change', (e) => {
+    if (e.target.name === 'penThickness') currentPenThickness = parseInt(e.target.value);
+  });
+
+  eraserThicknessOptions.addEventListener('change', (e) => {
+    if (e.target.name === 'eraserThickness') currentEraserThickness = parseInt(e.target.value);
+  });
+
+  clearFrameBtn.addEventListener('click', clearCurrentFrame);
+
+  canvasSizeSelect.addEventListener('change', (e) => {
+    const selectedValue = e.target.value;
+    customWidthInput.disabled = selectedValue !== 'custom';
+    customHeightInput.disabled = selectedValue !== 'custom';
+    if (selectedValue === 'custom') {
+      customWidthInput.focus();
+    } else {
+      const [width, height] = selectedValue.split('x').map(Number);
+      customWidthInput.value = width * PIXEL_SIZE;
+      customHeightInput.value = height * PIXEL_SIZE;
+    }
+  });
+
+  applySizeBtn.addEventListener('click', () => {
+    const newWidth = parseInt(customWidthInput.value);
+    const newHeight = parseInt(customHeightInput.value);
+    if (isNaN(newWidth) || isNaN(newHeight) || newWidth <= 0 || newHeight <= 0) {
+      alert('Please enter valid positive numbers for width and height.');
+      return;
+    }
+    applyCanvasSize(newWidth, newHeight);
+  });
+
+  penToolBtn.addEventListener('click', () => {
+    currentTool = 'pen';
+    setActiveToolButton('pen');
+  });
+
+  eraserToolBtn.addEventListener('click', () => {
+    currentTool = 'eraser';
+    setActiveToolButton('eraser');
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    console.log('mousedown event triggered.');
+    isDrawing = true;
+    saveState();
+    drawPixel(e);
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (isDrawing) {
+      console.log('mousemove event triggered while drawing.');
+      drawPixel(e);
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    console.log('mouseup event triggered. isDrawing set to false.');
+    isDrawing = false;
+  });
+  canvas.addEventListener('mouseleave', () => {
+    console.log('mouseleave event triggered. isDrawing set to false.');
+    isDrawing = false;
+  });
+
+  function drawPixel(e) {
+    console.log('drawPixel called.');
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const col = Math.floor(x / PIXEL_SIZE);
+    const row = Math.floor(y / PIXEL_SIZE);
+    const thickness = (currentTool === 'pen') ? currentPenThickness : currentEraserThickness;
+    const halfThickness = Math.floor(thickness / 2);
+    console.log(`Drawing at col: ${col}, row: ${row} with color: ${currentColor}`);
+
+    for (let rOffset = -halfThickness; rOffset <= halfThickness; rOffset++) {
+      for (let cOffset = -halfThickness; cOffset <= halfThickness; cOffset++) {
+        const targetRow = row + rOffset;
+        const targetCol = col + cOffset;
+        if (targetRow >= 0 && targetRow < ROWS && targetCol >= 0 && targetCol < COLS) {
+          frames[currentFrameIndex][targetRow][targetCol] = (currentTool === 'pen') ? currentColor : BACKGROUND_COLOR;
+          console.log(`Updated frame[${currentFrameIndex}][${targetRow}][${targetCol}] to ${frames[currentFrameIndex][targetRow][targetCol]}`);
+        }
+      }
+    }
+    drawGrid();
+  }
+
+  addFrameBtn.addEventListener('click', () => {
+    console.log('Add Frame button clicked.');
+    const newGrid = JSON.parse(JSON.stringify(frames[currentFrameIndex]));
+    frames.splice(currentFrameIndex + 1, 0, newGrid);
+    const newHistory = [JSON.parse(JSON.stringify(newGrid))];
+    history.splice(currentFrameIndex + 1, 0, newHistory);
+    historyIndex.splice(currentFrameIndex + 1, 0, 0);
+    currentFrameIndex++;
+    updateFrameIndicator();
+    drawGrid();
+  });
+
+  deleteFrameBtn.addEventListener('click', () => {
+    if (frames.length > 1) {
+      frames.splice(currentFrameIndex, 1);
+      history.splice(currentFrameIndex, 1);
+      historyIndex.splice(currentFrameIndex, 1);
+      if (currentFrameIndex >= frames.length) {
+        currentFrameIndex = frames.length - 1;
+      }
+      updateFrameIndicator();
+      drawGrid();
+    } else {
+      alert('Cannot delete the last frame!');
+    }
+  });
+
+  prevFrameBtn.addEventListener('click', () => {
+    if (currentFrameIndex > 0) {
+      currentFrameIndex--;
+      updateFrameIndicator();
+      drawGrid();
+    }
+  });
+
+  nextFrameBtn.addEventListener('click', () => {
+    if (currentFrameIndex < frames.length - 1) {
+      currentFrameIndex++;
+      updateFrameIndicator();
+      drawGrid();
+    }
+  });
+  
+  async function generateGif(forExport) {
+    if (frames.length === 0) {
+      alert('No frames to export or preview!');
+      return;
+    }
+    gifPreview.innerHTML = 'Generating GIF...';
+
+    try {
+      const gif = GIFEncoder();
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+      
+      for (const frameData of frames) {
+        // Draw frame on temp canvas
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            tempCtx.fillStyle = frameData[r][c];
+            tempCtx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+          }
+        }
+        
+        // Get image data
+        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // Quantize and apply palette
+        const palette = quantize(imageData.data, 256, { format: 'rgba4444' });
+        const index = applyPalette(imageData.data, palette, { format: 'rgba4444' });
+
+        // Write frame to encoder
+        gif.writeFrame(index, tempCanvas.width, tempCanvas.height, { palette, delay: 200 });
+      }
+
+      gif.finish();
+      const buffer = gif.bytes();
+      const blob = new Blob([buffer], { type: 'image/gif' });
+      
+      // Display GIF
+      gifPreview.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(blob);
+      gifPreview.appendChild(img);
+
+      if (forExport) {
+        const downloadLink = document.createElement('a');
+        downloadLink.href = img.src;
+        downloadLink.download = 'dot-animation.gif';
+        downloadLink.textContent = 'Download GIF';
+        downloadLink.style.display = 'block';
+        downloadLink.style.marginTop = '10px';
+        gifPreview.appendChild(downloadLink);
+      }
+    } catch (error) {
+      gifPreview.innerHTML = `<p style="color: red;">Error generating GIF: ${error.message}</p>`;
+      console.error('GIF generation error:', error);
+    }
+  }
+
+  exportGifBtn.addEventListener('click', () => generateGif(true));
+  previewGifBtn.addEventListener('click', () => generateGif(false));
+
+  // Initial setup
+  applyCanvasSize(parseInt(customWidthInput.value), parseInt(customHeightInput.value));
+  setActiveToolButton('pen');
+  paletteColors = document.querySelectorAll('.palette-color');
+  setActivePaletteColor(currentColor);
+});
