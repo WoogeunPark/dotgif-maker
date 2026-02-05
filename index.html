@@ -1,28 +1,85 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
+  <title>Dot GIF Maker | Premium Pixel Art Editor</title>
   <link href='/style.css' rel='stylesheet'>
 </head>
+
 <body>
   <div class="container">
     <h1>Dot GIF Maker</h1>
-    <div class="controls">
+
+    <!-- Sidebar: Drawing Tools & Canvas Size -->
+    <aside class="panel sidebar">
+      <div class="tool-controls">
+        <label class="tool-setting">Tool</label>
+        <button id="penTool" class="active">Pen</button>
+        <button id="eraserTool">Eraser</button>
+      </div>
+
+      <div class="tool-setting">
+        <label>Pen Size</label>
+        <div class="thickness-options" id="penThicknessOptions">
+          <input type="radio" id="penThickness1" name="penThickness" value="1" checked><label
+            for="penThickness1">1</label>
+          <input type="radio" id="penThickness3" name="penThickness" value="3"><label for="penThickness3">3</label>
+          <input type="radio" id="penThickness5" name="penThickness" value="5"><label for="penThickness5">5</label>
+        </div>
+      </div>
+
+      <div class="tool-setting">
+        <label>Eraser Size</label>
+        <div class="thickness-options" id="eraserThicknessOptions">
+          <input type="radio" id="eraserThickness1" name="eraserThickness" value="1" checked><label
+            for="eraserThickness1">1</label>
+          <input type="radio" id="eraserThickness3" name="eraserThickness" value="3"><label
+            for="eraserThickness3">3</label>
+          <input type="radio" id="eraserThickness5" name="eraserThickness" value="5"><label
+            for="eraserThickness5">5</label>
+        </div>
+      </div>
+
+      <div class="canvas-size-controls">
+        <label class="tool-setting">Canvas Size</label>
+        <select id="canvasSizeSelect">
+          <option value="32x32">32x32</option>
+          <option value="64x64">64x64</option>
+          <option value="128x128">128x128</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input type="number" id="customWidth" placeholder="Width" value="320" min="10" max="1000" disabled>
+        <input type="number" id="customHeight" placeholder="Height" value="320" min="10" max="1000" disabled>
+        <button id="applySize">Apply</button>
+      </div>
+
+      <button id="clearFrame" class="secondary">Clear Canvas</button>
+    </aside>
+
+    <!-- Main Editor: Canvas -->
+    <main>
+      <canvas id="dotCanvas" width="320" height="320"></canvas>
+    </main>
+
+    <!-- Right Panel: Colors & History -->
+    <aside class="panel controls-right">
       <div class="color-selection" data-mode="palette">
         <div class="color-mode-toggle">
           <span>Palette</span>
           <label class="switch">
             <input type="checkbox" id="colorModeToggle">
-            <span class="slider round"></span>
+            <span class="slider"></span>
           </label>
           <span>Custom</span>
         </div>
+
         <div class="color-picker-container">
-          <label for="colorPicker">Custom Color:</label>
+          <label class="tool-setting">Select Color</label>
           <input type="color" id="colorPicker" value="#000000">
         </div>
+
         <div class="color-palette">
           <div class="palette-color active" data-color="#000000" style="background-color: #000000;"></div>
           <div class="palette-color" data-color="#FF0000" style="background-color: #FF0000;"></div>
@@ -34,57 +91,57 @@
           <div class="palette-color" data-color="#FFFFFF" style="background-color: #FFFFFF;"></div>
         </div>
       </div>
-      <div class="tool-controls">
-        <button id="penTool" class="active">Pen</button>
-        <button id="eraserTool">Eraser</button>
-        <div class="tool-setting">
-          <label>Pen Thickness:</label>
-          <div class="thickness-options" id="penThicknessOptions">
-            <input type="radio" id="penThickness1" name="penThickness" value="1" checked><label for="penThickness1">1</label>
-            <input type="radio" id="penThickness3" name="penThickness" value="3"><label for="penThickness3">3</label>
-            <input type="radio" id="penThickness5" name="penThickness" value="5"><label for="penThickness5">5</label>
-          </div>
-        </div>
-        <div class="tool-setting">
-          <label>Eraser Thickness:</label>
-          <div class="thickness-options" id="eraserThicknessOptions">
-            <input type="radio" id="eraserThickness1" name="eraserThickness" value="1" checked><label for="eraserThickness1">1</label>
-            <input type="radio" id="eraserThickness3" name="eraserThickness" value="3"><label for="eraserThickness3">3</label>
-            <input type="radio" id="eraserThickness5" name="eraserThickness" value="5"><label for="eraserThickness5">5</label>
-          </div>
-        </div>
-        <div class="history-controls">
-          <button id="undoBtn">Undo</button>
-          <button id="redoBtn">Redo</button>
-        </div>
-        <button id="clearFrame">Clear Frame</button>
+
+      <div class="history-controls">
+        <button id="undoBtn">Undo</button>
+        <button id="redoBtn">Redo</button>
       </div>
-      <div class="canvas-size-controls">
-        <label for="canvasSizeSelect">Size:</label>
-        <select id="canvasSizeSelect">
-          <option value="32x32">32x32</option>
-          <option value="64x64">64x64</option>
-          <option value="128x128">128x128</option>
-          <option value="custom">Custom</option>
-        </select>
-        <input type="number" id="customWidth" placeholder="Width" value="320" min="10" max="1000" disabled>
-        <input type="number" id="customHeight" placeholder="Height" value="320" min="10" max="1000" disabled>
-        <button id="applySize">Apply Size</button>
-      </div>
+    </aside>
+
+    <!-- Timeline: Frame Controls -->
+    <footer class="panel timeline">
       <div class="frame-controls">
-        <button id="prevFrame">Previous</button>
+        <button id="prevFrame">←</button>
         <span id="frameIndicator">1 / 1</span>
-        <button id="nextFrame">Next</button>
-        <button id="addFrame">Add Frame</button>
-        <button id="deleteFrame">Delete Frame</button>
+        <button id="nextFrame">→</button>
       </div>
-      <button id="exportGif">Export GIF</button>
-      <button id="previewGif">Preview GIF</button>
+
+      <div class="frame-actions">
+        <button id="addFrame">+ Add Frame</button>
+        <button id="deleteFrame">− Delete</button>
+      </div>
+
+      <div class="export-controls">
+        <button id="previewGif">Preview</button>
+        <button id="exportGif">Export GIF</button>
+      </div>
+    </footer>
+
+    <!-- Overlay Preview Module -->
+    <div id="gifPreviewOverlay" class="gif-preview-overlay">
+      <div class="preview-card">
+        <button id="closePreview" class="close-btn">&times;</button>
+        <div class="preview-header">
+          <h2 style="font-size: 1.2rem; margin-bottom: 8px;">Animation Preview</h2>
+        </div>
+        <div class="preview-stage">
+          <img id="previewImg" src="" alt="GIF Preview">
+          <div id="playbackOverlay" class="playback-overlay">
+            <div class="playback-icon"></div>
+          </div>
+        </div>
+
+        <div class="preview-controls">
+          <div class="speed-control">
+            <label>Speed: <span id="speedValue">1.0</span>x</label>
+            <input type="range" id="speedSlider" min="0.1" max="2.0" step="0.1" value="1.0">
+          </div>
+        </div>
+      </div>
     </div>
-    <canvas id="dotCanvas" width="320" height="320"></canvas>
-    <div id="gifPreview"></div>
   </div>
 
   <script defer type="module" src="/main.js"></script>
 </body>
+
 </html>

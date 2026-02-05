@@ -88,8 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const currentGrid = frames[currentFrameIndex];
     if (!currentGrid) {
-        console.log('No current grid to draw.');
-        return;
+      console.log('No current grid to draw.');
+      return;
     }
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -99,11 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     console.log('drawGrid finished drawing pixels.');
   }
-  
+
   function updateFrameIndicator() {
     frameIndicator.textContent = `${currentFrameIndex + 1} / ${frames.length}`;
     if (history[currentFrameIndex]) {
-        updateUndoRedoButtons();
+      updateUndoRedoButtons();
     }
   }
 
@@ -285,6 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentFrameIndex++;
     updateFrameIndicator();
     drawGrid();
+    saveState();
   });
 
   deleteFrameBtn.addEventListener('click', () => {
@@ -317,13 +318,93 @@ document.addEventListener('DOMContentLoaded', () => {
       drawGrid();
     }
   });
-  
+
+
+  const previewOverlay = document.getElementById('gifPreviewOverlay');
+  const previewImg = document.getElementById('previewImg');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedValue = document.getElementById('speedValue');
+  const closePreviewBtn = document.getElementById('closePreview');
+  const playbackOverlay = document.getElementById('playbackOverlay');
+  const previewStage = document.querySelector('.preview-stage');
+
+  let previewInterval = null;
+  let previewAnimationFrame = 0;
+  let currentSpeed = 1.0;
+
+  async function startPreview() {
+    if (frames.length === 0) return;
+
+    stopPreview();
+    previewOverlay.classList.add('active');
+    playbackOverlay.classList.remove('paused');
+    playbackOverlay.classList.add('playing');
+
+    const playEffect = () => {
+      renderPreviewFrame(previewAnimationFrame);
+      previewAnimationFrame = (previewAnimationFrame + 1) % frames.length;
+    };
+
+    const renderPreviewFrame = (idx) => {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      const frameData = frames[idx];
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          tempCtx.fillStyle = frameData[r][c];
+          tempCtx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+        }
+      }
+      previewImg.src = tempCanvas.toDataURL();
+    };
+
+    previewInterval = setInterval(playEffect, 200 / currentSpeed);
+  }
+
+  function stopPreview() {
+    if (previewInterval) {
+      clearInterval(previewInterval);
+      previewInterval = null;
+      playbackOverlay.classList.remove('playing');
+      playbackOverlay.classList.add('paused');
+    }
+  }
+
+  function togglePreview() {
+    if (previewInterval) {
+      stopPreview();
+    } else {
+      startPreview();
+    }
+  }
+
+  function closePreview() {
+    stopPreview();
+    previewOverlay.classList.remove('active');
+    previewAnimationFrame = 0;
+  }
+
+  speedSlider.addEventListener('input', (e) => {
+    currentSpeed = parseFloat(e.target.value);
+    speedValue.textContent = currentSpeed.toFixed(1);
+    if (previewInterval) {
+      stopPreview();
+      startPreview();
+    }
+  });
+
+  previewStage.addEventListener('click', togglePreview);
+  closePreviewBtn.addEventListener('click', closePreview);
+  previewGifBtn.addEventListener('click', startPreview);
+
   async function generateGif(forExport) {
     if (frames.length === 0) {
-      alert('No frames to export or preview!');
+      alert('No frames to export!');
       return;
     }
-    gifPreview.innerHTML = 'Generating GIF...';
 
     try {
       const gif = GIFEncoder();
@@ -331,54 +412,38 @@ document.addEventListener('DOMContentLoaded', () => {
       tempCanvas.width = canvas.width;
       tempCanvas.height = canvas.height;
       const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-      
+
       for (const frameData of frames) {
-        // Draw frame on temp canvas
         for (let r = 0; r < ROWS; r++) {
           for (let c = 0; c < COLS; c++) {
             tempCtx.fillStyle = frameData[r][c];
             tempCtx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
           }
         }
-        
-        // Get image data
+
         const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // Quantize and apply palette
         const palette = quantize(imageData.data, 256, { format: 'rgba4444' });
         const index = applyPalette(imageData.data, palette, { format: 'rgba4444' });
-
-        // Write frame to encoder
-        gif.writeFrame(index, tempCanvas.width, tempCanvas.height, { palette, delay: 200 });
+        gif.writeFrame(index, tempCanvas.width, tempCanvas.height, { palette, delay: 200 / currentSpeed });
       }
 
       gif.finish();
       const buffer = gif.bytes();
       const blob = new Blob([buffer], { type: 'image/gif' });
-      
-      // Display GIF
-      gifPreview.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(blob);
-      gifPreview.appendChild(img);
 
       if (forExport) {
         const downloadLink = document.createElement('a');
-        downloadLink.href = img.src;
+        downloadLink.href = URL.createObjectURL(blob);
         downloadLink.download = 'dot-animation.gif';
-        downloadLink.textContent = 'Download GIF';
-        downloadLink.style.display = 'block';
-        downloadLink.style.marginTop = '10px';
-        gifPreview.appendChild(downloadLink);
+        downloadLink.click();
       }
     } catch (error) {
-      gifPreview.innerHTML = `<p style="color: red;">Error generating GIF: ${error.message}</p>`;
       console.error('GIF generation error:', error);
+      alert('Error generating GIF: ' + error.message);
     }
   }
 
   exportGifBtn.addEventListener('click', () => generateGif(true));
-  previewGifBtn.addEventListener('click', () => generateGif(false));
 
   // Initial setup
   applyCanvasSize(parseInt(customWidthInput.value), parseInt(customHeightInput.value));
