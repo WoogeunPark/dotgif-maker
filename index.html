@@ -16,37 +16,43 @@
     <aside class="panel sidebar">
       <div class="tool-section">
         <label class="tool-setting">Tools</label>
-        <div class="tool-row" id="penToolRow">
-          <button id="penTool" class="active">
-            Pen
-            <span id="penColorPreview" class="color-preview-dot"></span>
+
+        <!-- Pen Tool Row -->
+        <div class="tool-row threaded-layout" id="penToolRow">
+          <button id="penTool" class="tool-btn active" title="Pen" aria-label="Pen">
           </button>
-          <div class="tool-inline-settings" id="penSettings">
-            <div class="thickness-options" id="penThicknessOptions">
-              <input type="radio" id="penThickness1" name="penThickness" value="1" checked><label
-                for="penThickness1">1</label>
-              <input type="radio" id="penThickness3" name="penThickness" value="3"><label for="penThickness3">3</label>
-              <input type="radio" id="penThickness5" name="penThickness" value="5"><label for="penThickness5">5</label>
-            </div>
+
+          <div id="penColorPreview" class="color-preview-dot standalone"></div>
+
+          <div class="thickness-options inline" id="penThicknessOptions">
+            <input type="radio" id="penThickness1" name="penThickness" value="1" checked>
+            <label for="penThickness1" class="size-label">1</label>
+            <input type="radio" id="penThickness3" name="penThickness" value="3">
+            <label for="penThickness3" class="size-label">3</label>
+            <input type="radio" id="penThickness5" name="penThickness" value="5">
+            <label for="penThickness5" class="size-label">5</label>
           </div>
         </div>
 
-        <div class="tool-row" id="eraserToolRow">
-          <button id="eraserTool">Eraser</button>
-          <div class="tool-inline-settings" id="eraserSettings">
-            <div class="thickness-options" id="eraserThicknessOptions">
-              <input type="radio" id="eraserThickness1" name="eraserThickness" value="1" checked><label
-                for="eraserThickness1">1</label>
-              <input type="radio" id="eraserThickness3" name="eraserThickness" value="3"><label
-                for="eraserThickness3">3</label>
-              <input type="radio" id="eraserThickness5" name="eraserThickness" value="5"><label
-                for="eraserThickness5">5</label>
-            </div>
+        <!-- Eraser Tool Row -->
+        <div class="tool-row threaded-layout" id="eraserToolRow">
+          <button id="eraserTool" class="tool-btn" title="Eraser" aria-label="Eraser">
+          </button>
+
+          <div class="thickness-options inline" id="eraserThicknessOptions">
+            <input type="radio" id="eraserThickness1" name="eraserThickness" value="1" checked>
+            <label for="eraserThickness1" class="size-label">1</label>
+            <input type="radio" id="eraserThickness3" name="eraserThickness" value="3">
+            <label for="eraserThickness3" class="size-label">3</label>
+            <input type="radio" id="eraserThickness5" name="eraserThickness" value="5">
+            <label for="eraserThickness5" class="size-label">5</label>
           </div>
         </div>
 
-        <div class="tool-row" id="eyedropperToolRow">
-          <button id="eyedropperTool">Eyedropper</button>
+        <!-- Eyedropper Tool Row -->
+        <div class="tool-row threaded-layout" id="eyedropperToolRow">
+          <button id="eyedropperTool" class="tool-btn" title="Eyedropper" aria-label="Eyedropper">
+          </button>
         </div>
       </div>
 
@@ -55,9 +61,24 @@
           <span>Palette</span>
           <label class="switch">
             <input type="checkbox" id="colorModeToggle">
-            <span class="slider"></span>
+            <span class="slider round"></span>
           </label>
           <span>Custom</span>
+        </div>
+
+        <!-- Import Image Section -->
+        <div class="import-section" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+          <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+          <button id="importImageBtn" class="action-btn"
+            style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+            Import Image
+          </button>
         </div>
 
         <div class="recent-colors">
@@ -157,7 +178,7 @@
     </div>
   </div>
 
-  <script defer type="module" src="/main.js"></script>
+  <script defer type="module" src="/main.js?v=2"></script>
 </body>
 
 </html>

@@ -294,6 +294,78 @@ document.addEventListener('DOMContentLoaded', () => {
     setActiveToolButton('eyedropper');
   });
 
+  // --- Image Import Feature ---
+  const imageUpload = document.getElementById('imageUpload');
+  const importImageBtn = document.getElementById('importImageBtn');
+
+  importImageBtn.addEventListener('click', () => {
+    imageUpload.click();
+  });
+
+  imageUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          processImportedImage(img);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  function processImportedImage(img) {
+    // Create an off-screen canvas to resize and pixelate the image
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = COLS;  // Resize exactly to grid dimensions
+    offCanvas.height = ROWS;
+    const offCtx = offCanvas.getContext('2d');
+    
+    // Draw image stretched to fit grid (simple pixelation)
+    // To maintain aspect ratio and crop, we'd need more complex logic.
+    // Given "crops to canvas supported size", fitting to dimensions is a good start.
+    // For better pixelation, disable smoothing
+    offCtx.imageSmoothingEnabled = false;
+    offCtx.drawImage(img, 0, 0, COLS, ROWS);
+
+    // Get pixel data
+    const imageData = offCtx.getImageData(0, 0, COLS, ROWS);
+    const data = imageData.data;
+
+    // Save current state for Undo
+    saveState();
+
+    // Map pixels to grid
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const index = (r * COLS + c) * 4;
+        const red = data[index];
+        const green = data[index + 1];
+        const blue = data[index + 2];
+        const alpha = data[index + 3];
+
+        // Simple hex conversion
+        if (alpha < 128) {
+             frames[currentFrameIndex][r][c] = BACKGROUND_COLOR; // Transparent-ish
+        } else {
+             frames[currentFrameIndex][r][c] = rgbToHex(red, green, blue);
+        }
+      }
+    }
+    
+    drawGrid();
+    
+    // Reset file input so same file can be selected again
+    imageUpload.value = '';
+  }
+
+  function rgbToHex(r, g, b) {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+  }
+
   // Initialize UI
   setActiveToolButton('pen');
 
