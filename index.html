@@ -5,190 +5,203 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dot GIF Maker | Premium Pixel Art Editor</title>
-  <link href='/style.css?v=4' rel='stylesheet'>
+  <link href='/style.css?v=14' rel='stylesheet'>
 </head>
 
 <body>
   <div class="container">
-    <h1>Dot GIF Maker</h1>
-
-    <!-- Sidebar: All Controls -->
-    <aside class="panel sidebar">
-      <div class="tool-section">
-        <label class="tool-setting">Tools</label>
-
-        <!-- Pen Tool Row -->
-        <div class="tool-row threaded-layout" id="penToolRow">
-          <button id="penTool" class="tool-btn active" title="Pen" aria-label="Pen">
-          </button>
-
-          <div id="penColorPreview" class="color-preview-dot standalone"></div>
-
-          <div class="thickness-options inline" id="penThicknessOptions">
-            <input type="radio" id="penThickness1" name="penThickness" value="1" checked>
-            <label for="penThickness1" class="size-label">1</label>
-            <input type="radio" id="penThickness3" name="penThickness" value="3">
-            <label for="penThickness3" class="size-label">3</label>
-            <input type="radio" id="penThickness5" name="penThickness" value="5">
-            <label for="penThickness5" class="size-label">5</label>
-          </div>
-        </div>
-
-        <!-- Eraser Tool Row -->
-        <div class="tool-row threaded-layout" id="eraserToolRow">
-          <button id="eraserTool" class="tool-btn" title="Eraser" aria-label="Eraser">
-          </button>
-
-          <div class="thickness-options inline" id="eraserThicknessOptions">
-            <input type="radio" id="eraserThickness1" name="eraserThickness" value="1" checked>
-            <label for="eraserThickness1" class="size-label">1</label>
-            <input type="radio" id="eraserThickness3" name="eraserThickness" value="3">
-            <label for="eraserThickness3" class="size-label">3</label>
-            <input type="radio" id="eraserThickness5" name="eraserThickness" value="5">
-            <label for="eraserThickness5" class="size-label">5</label>
-          </div>
-        </div>
-
-        <!-- Eyedropper Tool Row -->
-        <div class="tool-row threaded-layout" id="eyedropperToolRow">
-          <button id="eyedropperTool" class="tool-btn" title="Eyedropper" aria-label="Eyedropper">
-          </button>
-
-          <div id="recentColorsContainer" class="recent-colors-grid" style="margin-left: auto;">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
+    <header class="app-header">
+      <div class="header-left">
+        <h1>Dot GIF Maker</h1>
       </div>
 
-      <div class="color-selection" data-mode="palette">
-        <div class="color-mode-toggle">
-          <span>Palette</span>
-          <label class="switch">
-            <input type="checkbox" id="colorModeToggle">
-            <span class="slider round"></span>
-          </label>
-          <span>Custom</span>
-        </div>
-
-
-
-        <!-- Recent colors were here -->
-
-        <div class="color-picker-container">
-          <label class="tool-setting">Select Color</label>
-          <input type="color" id="colorPicker" value="#000000">
-        </div>
-
-        <div class="color-palette">
-          <div class="palette-color active" data-color="#000000" style="background-color: #000000;"></div>
-          <div class="palette-color" data-color="#FFFF00" style="background-color: #FFFF00;"></div>
-          <div class="palette-color" data-color="#FF0000" style="background-color: #FF0000;"></div>
-          <div class="palette-color" data-color="#0000FF" style="background-color: #0000FF;"></div>
-          <div class="palette-color" data-color="#00FF00" style="background-color: #00FF00;"></div>
-          <div class="palette-color" data-color="#FFA500" style="background-color: #FFA500;"></div>
-          <div class="palette-color" data-color="#800080" style="background-color: #800080;"></div>
-          <div class="palette-color" data-color="#A52A2A" style="background-color: #A52A2A;"></div>
-          <div class="palette-color" data-color="#808080" style="background-color: #808080;"></div>
-          <div class="palette-color" data-color="#FFC0CB" style="background-color: #FFC0CB;"></div>
-          <div class="palette-color" data-color="#000080" style="background-color: #000080;"></div>
-          <div class="palette-color" data-color="#008080" style="background-color: #008080;"></div>
-          <div class="palette-color" data-color="#800000" style="background-color: #800000;"></div>
-          <div class="palette-color" data-color="#FF00FF" style="background-color: #FF00FF;"></div>
-          <div class="palette-color" data-color="#00FFFF" style="background-color: #00FFFF;"></div>
-          <div class="palette-color" data-color="#FFFFFF" style="background-color: #FFFFFF;"></div>
-        </div>
-      </div>
-
-      <div class="canvas-size-controls">
-        <div class="canvas-size-header">
-          <label class="tool-setting">Canvas Size</label>
+      <div class="header-center">
+        <!-- Canvas Size -->
+        <div class="header-control-group">
+          <label class="header-label">Size</label>
           <select id="canvasSizeSelect">
             <option value="32x32">32x32</option>
             <option value="64x64">64x64</option>
             <option value="80x80">80x80</option>
             <option value="custom">Custom</option>
           </select>
-        </div>
-        <div class="custom-size-inputs">
-          <input type="number" id="customWidth" placeholder="W" value="320" min="10" max="800" disabled>
-          <input type="number" id="customHeight" placeholder="H" value="320" min="10" max="800" disabled>
-        </div>
-      </div>
-
-      <div class="sidebar-footer">
-        <div class="history-controls">
-          <button id="undoBtn">Undo</button>
-          <button id="redoBtn">Redo</button>
-        </div>
-        <button id="clearFrame" class="secondary">Clear Canvas</button>
-      </div>
-    </aside>
-
-    <!-- Main Editor: Canvas -->
-    <main>
-      <canvas id="dotCanvas" width="320" height="320"></canvas>
-    </main>
-
-    <!-- Right Sidebar: Frames & Actions -->
-    <aside class="panel right-sidebar">
-      <!-- Import Image Section -->
-      <div class="tool-section full-width">
-        <label class="tool-setting">Import Reference</label>
-        <div class="import-controls">
-          <input type="file" id="imageUpload" accept="image/*" style="display: none;">
-          <button id="importImageBtn" class="action-btn icon-btn">
-            Import Image
-          </button>
-        </div>
-      </div>
-
-      <!-- Frame List (Thumbnails) -->
-      <div class="frames-section">
-        <div class="frame-header">
-          <label class="tool-setting">Frames (<span id="frameCount">1</span>)</label>
-          <div class="frame-actions-mini">
-            <button id="addFrame" title="Add Frame">+</button>
-            <button id="deleteFrame" title="Delete Frame">-</button>
-          </div>
-        </div>
-        <div id="frameList" class="frame-list">
-          <!-- Thumbnails generated by JS -->
-        </div>
-      </div>
-
-      <div class="sidebar-footer">
-        <div class="export-controls vertical">
-          <button id="previewGif">Preview Animation</button>
-          <button id="exportGif" class="primary">Export GIF</button>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Overlay Preview Module -->
-    <div id="gifPreviewOverlay" class="gif-preview-overlay">
-      <div class="preview-card">
-        <button id="closePreview" class="close-btn">&times;</button>
-        <div class="preview-header">
-          <h2 style="font-size: 1.2rem; margin-bottom: 8px;">Animation Preview</h2>
-        </div>
-        <div class="preview-stage">
-          <img id="previewImg" src="" alt="GIF Preview">
-          <div id="playbackOverlay" class="playback-overlay">
-            <div class="playback-icon"></div>
+          <div class="custom-size-inputs inline">
+            <input type="number" id="customWidth" placeholder="W" value="320" min="10" max="800" disabled>
+            <input type="number" id="customHeight" placeholder="H" value="320" min="10" max="800" disabled>
           </div>
         </div>
 
-        <div class="preview-controls">
-          <div class="speed-control">
-            <label>Speed: <span id="speedValue">1.0</span>x</label>
-            <input type="range" id="speedSlider" min="0.1" max="2.0" step="0.1" value="1.0">
+        <!-- Grid Opacity -->
+        <div class="header-control-group">
+          <label class="header-label">Grid <span id="gridOpacityValue">0.4</span></label>
+          <input type="range" id="gridOpacitySlider" min="0" max="1" step="0.1" value="0.4">
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="undoBtn" title="Undo">Undo</button>
+        <button id="redoBtn" title="Redo">Redo</button>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- Sidebar: All Controls -->
+      <aside class="panel sidebar">
+        <div class="tool-section">
+          <label class="tool-setting">Tools</label>
+
+          <!-- Pen Tool Row -->
+          <div class="tool-row threaded-layout" id="penToolRow">
+            <button id="penTool" class="tool-btn active" title="Pen" aria-label="Pen">
+            </button>
+
+            <div id="penColorPreview" class="color-preview-dot standalone"></div>
+
+            <div class="thickness-options inline" id="penThicknessOptions">
+              <input type="radio" id="penThickness1" name="penThickness" value="1" checked>
+              <label for="penThickness1" class="size-label">1</label>
+              <input type="radio" id="penThickness3" name="penThickness" value="3">
+              <label for="penThickness3" class="size-label">3</label>
+              <input type="radio" id="penThickness5" name="penThickness" value="5">
+              <label for="penThickness5" class="size-label">5</label>
+            </div>
+          </div>
+
+          <!-- Eraser Tool Row -->
+          <div class="tool-row threaded-layout" id="eraserToolRow">
+            <button id="eraserTool" class="tool-btn" title="Eraser" aria-label="Eraser">
+            </button>
+
+            <div class="thickness-options inline" id="eraserThicknessOptions">
+              <input type="radio" id="eraserThickness1" name="eraserThickness" value="1" checked>
+              <label for="eraserThickness1" class="size-label">1</label>
+              <input type="radio" id="eraserThickness3" name="eraserThickness" value="3">
+              <label for="eraserThickness3" class="size-label">3</label>
+              <input type="radio" id="eraserThickness5" name="eraserThickness" value="5">
+              <label for="eraserThickness5" class="size-label">5</label>
+            </div>
+          </div>
+
+          <!-- Eyedropper Tool Row -->
+          <div class="tool-row threaded-layout" id="eyedropperToolRow">
+            <button id="eyedropperTool" class="tool-btn" title="Eyedropper" aria-label="Eyedropper">
+            </button>
+
+            <div id="recentColorsContainer" class="recent-colors-grid" style="margin-left: auto;">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <div class="color-selection" data-mode="palette">
+          <div class="color-mode-toggle">
+            <span>Palette</span>
+            <label class="switch">
+              <input type="checkbox" id="colorModeToggle">
+              <span class="slider round"></span>
+            </label>
+            <span>Custom</span>
+          </div>
+
+
+
+          <!-- Recent colors were here -->
+
+          <div class="color-picker-container">
+            <label class="tool-setting">Select Color</label>
+            <input type="color" id="colorPicker" value="#000000">
+          </div>
+
+          <div class="color-palette">
+            <div class="palette-color active" data-color="#000000" style="background-color: #000000;"></div>
+            <div class="palette-color" data-color="#FFFF00" style="background-color: #FFFF00;"></div>
+            <div class="palette-color" data-color="#FF0000" style="background-color: #FF0000;"></div>
+            <div class="palette-color" data-color="#0000FF" style="background-color: #0000FF;"></div>
+            <div class="palette-color" data-color="#00FF00" style="background-color: #00FF00;"></div>
+            <div class="palette-color" data-color="#FFA500" style="background-color: #FFA500;"></div>
+            <div class="palette-color" data-color="#800080" style="background-color: #800080;"></div>
+            <div class="palette-color" data-color="#A52A2A" style="background-color: #A52A2A;"></div>
+            <div class="palette-color" data-color="#808080" style="background-color: #808080;"></div>
+            <div class="palette-color" data-color="#FFC0CB" style="background-color: #FFC0CB;"></div>
+            <div class="palette-color" data-color="#000080" style="background-color: #000080;"></div>
+            <div class="palette-color" data-color="#008080" style="background-color: #008080;"></div>
+            <div class="palette-color" data-color="#800000" style="background-color: #800000;"></div>
+            <div class="palette-color" data-color="#FF00FF" style="background-color: #FF00FF;"></div>
+            <div class="palette-color" data-color="#00FFFF" style="background-color: #00FFFF;"></div>
+            <div class="palette-color" data-color="#FFFFFF" style="background-color: #FFFFFF;"></div>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          <button id="clearFrame" class="secondary">Clear Canvas</button>
+        </div>
+      </aside>
+
+      <!-- Main Editor: Canvas -->
+      <main>
+        <canvas id="dotCanvas" width="320" height="320"></canvas>
+      </main>
+
+      <!-- Right Sidebar: Frames & Actions -->
+      <aside class="panel right-sidebar">
+        <!-- Import Image Section -->
+        <div class="tool-section full-width">
+          <label class="tool-setting">Import Reference</label>
+          <div class="import-controls">
+            <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+            <button id="importImageBtn" class="action-btn icon-btn">
+              Import Image
+            </button>
+          </div>
+        </div>
+
+        <!-- Frame List (Thumbnails) -->
+        <div class="frames-section">
+          <div class="frame-header">
+            <label class="tool-setting">Frames (<span id="frameCount">1</span>)</label>
+            <div class="frame-actions-mini">
+              <button id="addFrame" title="Add Frame">+</button>
+              <button id="deleteFrame" title="Delete Frame">-</button>
+            </div>
+          </div>
+          <div id="frameList" class="frame-list">
+            <!-- Thumbnails generated by JS -->
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="export-controls vertical">
+            <button id="previewGif">Preview Animation</button>
+            <button id="exportGif" class="primary">Export GIF</button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Overlay Preview Module -->
+      <div id="gifPreviewOverlay" class="gif-preview-overlay">
+        <div class="preview-card">
+          <button id="closePreview" class="close-btn">&times;</button>
+          <div class="preview-header">
+            <h2 style="font-size: 1.2rem; margin-bottom: 8px;">Animation Preview</h2>
+          </div>
+          <div class="preview-stage">
+            <img id="previewImg" src="" alt="GIF Preview">
+            <div id="playbackOverlay" class="playback-overlay">
+              <div class="playback-icon"></div>
+            </div>
+          </div>
+
+          <div class="preview-controls">
+            <div class="speed-control">
+              <label>Speed: <span id="speedValue">1.0</span>x</label>
+              <input type="range" id="speedSlider" min="0.1" max="2.0" step="0.1" value="1.0">
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <script defer type="module" src="/main.js?v=7"></script>
+    <script defer type="module" src="/main.js?v=10"></script>
 </body>
 
 </html>

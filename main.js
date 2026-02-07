@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentColor = colorPicker.value;
   let isDrawing = false;
+  let currentGridOpacity = 0.4; // Default opacity
   let frames = [];
   let history = [];
   let historyIndex = [];
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Draw faint grid
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'; // Significantly darker
+    ctx.strokeStyle = `rgba(0, 0, 0, ${currentGridOpacity})`;
     ctx.lineWidth = 1;
 
     // Vertical lines
@@ -667,6 +668,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   exportGifBtn.addEventListener('click', () => generateGif(true));
+
+  const gridOpacitySlider = document.getElementById('gridOpacitySlider');
+  const gridOpacityValue = document.getElementById('gridOpacityValue');
+
+  if (gridOpacitySlider && gridOpacityValue) {
+    gridOpacitySlider.addEventListener('input', (e) => {
+      currentGridOpacity = parseFloat(e.target.value);
+      gridOpacityValue.textContent = currentGridOpacity.toFixed(1);
+      drawGrid();
+    });
+  }
 
   // Initial setup
   applyCanvasSize(parseInt(customWidthInput.value), parseInt(customHeightInput.value));
