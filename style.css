@@ -31,18 +31,163 @@ body {
   background-image: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #0a0a0c 100%);
 }
 
+/* Update Container Grid for 3 Columns */
 .container {
   width: 98vw;
   height: 95vh;
   display: grid;
   grid-template-areas:
-    "header header"
-    "sidebar main"
-    "timeline timeline";
-  grid-template-columns: 320px 1fr;
-  grid-template-rows: auto 1fr auto;
+    "header header header"
+    "sidebar main right-sidebar";
+  grid-template-columns: 300px 1fr 280px;
+  grid-template-rows: auto 1fr;
   gap: 16px;
   padding: 16px;
+}
+
+/* Adjust timeline area removal */
+.timeline {
+  display: none;
+}
+
+/* Right Sidebar Styles */
+.right-sidebar {
+  grid-area: right-sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.import-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn.icon-btn {
+  width: 100%;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+}
+
+.action-btn.icon-btn:hover {
+  background: var(--border);
+  color: var(--text-main);
+  border-style: solid;
+}
+
+/* Frame List Styles */
+.frames-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 12px;
+  min-height: 0;
+  /* for scrolling */
+}
+
+.frame-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.frame-actions-mini {
+  display: flex;
+  gap: 4px;
+}
+
+.frame-actions-mini button {
+  padding: 4px 8px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.frame-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
+  /* scrollbar space */
+  flex: 1;
+}
+
+.frame-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.frame-item:hover {
+  border-color: var(--text-muted);
+}
+
+.frame-item.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+}
+
+.frame-number {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 24px;
+}
+
+.frame-thumbnail {
+  width: 64px;
+  height: 64px;
+  background: #000;
+  image-rendering: pixelated;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.export-controls.vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-controls.vertical button {
+  width: 100%;
+}
+
+.primary {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+
+.primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+}
+
+/* Mobile Responsive Update */
+@media (max-width: 1024px) {
+  .container {
+    grid-template-areas:
+      "header"
+      "main"
+      "sidebar"
+      "right-sidebar";
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
 }
 
 h1 {
@@ -195,15 +340,24 @@ button:disabled {
 
 /* Icons */
 #penTool {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z'%3E%3C/path%3E%3C/svg%3E");
+  background-image: url("/assets/pen.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 24px;
 }
 
 #eraserTool {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L20 20Z'%3E%3C/path%3E%3Cpath d='M17 17L7 7'%3E%3C/path%3E%3C/svg%3E");
+  background-image: url("/assets/eraser.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 24px;
 }
 
 #eyedropperTool {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 21a4 4 0 0 1-4-4c0-1.5.8-2.5 1.7-4L2 15l8 4 1-1.3c1.5-.9 2.5-1.7 4-1.7'%3E%3C/path%3E%3Cpath d='M12 11l-8 8'%3E%3C/path%3E%3Cpath d='M19 3a2.828 2.828 0 0 1 2.8 2.8l-8.5 8.5-2.8-2.8L19 3z'%3E%3C/path%3E%3C/svg%3E");
+  background-image: url("/assets/eyedropper.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 24px;
 }
 
 /* Inline Thickness Options */
@@ -279,14 +433,19 @@ button:disabled {
 
 .recent-colors-grid {
   display: flex;
-  gap: 8px;
-  min-height: 24px;
+  gap: 4px;
+  flex-wrap: wrap;
+  /* Allow wrapping if needed, but try to keep it compact */
+  justify-content: flex-end;
+  max-width: 200px;
+  /* Limit width to force wrap if too many */
 }
 
 .recent-color {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 20px;
+  /* Slightly smaller to fit more */
+  height: 20px;
+  border-radius: 4px;
   cursor: pointer;
   border: 1px solid var(--border);
   transition: transform 0.2s;
@@ -671,7 +830,6 @@ input[type="range"] {
 
 /* Realistic Pen Icon & Cursor */
 /* Purple body, cyan details */
-#penTool,
 .pen-cursor {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='bodyGrad' x1='20' y1='20' x2='80' y2='80' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%235D4388'/%3E%3Cstop offset='100%25' stop-color='%23382655'/%3E%3C/linearGradient%3E%3ClinearGradient id='tipGrad' x1='0' y1='0' x2='100' y2='100'%3E%3Cstop offset='0%25' stop-color='%2300FFFF'/%3E%3Cstop offset='100%25' stop-color='%230088AA'/%3E%3C/linearGradient%3E%3C/defs%3E%3C!-- Pen Body --%3E%3Crect x='30' y='10' width='40' height='70' rx='10' transform='rotate(-45 50 50)' fill='url(%23bodyGrad)'/%3E%3C!-- Cyan Band --%3E%3Crect x='30' y='15' width='40' height='10' transform='rotate(-45 50 50)' fill='url(%23tipGrad)'/%3E%3C!-- Tip --%3E%3Cpath d='M25 85 L15 95 L35 85 Z' fill='%2300FFFF'/%3E%3Ccircle cx='18' cy='92' r='2' fill='white'/%3E%3C/svg%3E");
 }
@@ -682,7 +840,6 @@ input[type="range"] {
 
 /* Realistic Eraser Icon & Cursor */
 /* Pink top, grey bottom, 3D block */
-#eraserTool,
 .eraser-cursor {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='pinkGrad' x1='0' y1='0' x2='100' y2='100'%3E%3Cstop offset='0%25' stop-color='%23FF69B4'/%3E%3Cstop offset='100%25' stop-color='%23FF1493'/%3E%3C/linearGradient%3E%3ClinearGradient id='greyGrad' x1='0' y1='0' x2='100' y2='100'%3E%3Cstop offset='0%25' stop-color='%23E0E0E0'/%3E%3Cstop offset='100%25' stop-color='%23A0A0A0'/%3E%3C/linearGradient%3E%3C/defs%3E%3C!-- Eraser Body (Pink) --%3E%3Cpath d='M30 30 L70 30 L80 40 L40 40 Z' fill='%23CC5290'/%3E%3Cpath d='M30 30 L40 40 L40 80 L30 70 Z' fill='%23B04278'/%3E%3Crect x='40' y='40' width='40' height='40' fill='url(%23pinkGrad)'/%3E%3C!-- Eraser Bottom (Grey) --%3E%3Cpath d='M30 55 L70 55 L80 65 L40 65 Z' fill='none'/%3E%3Cpath d='M25 65 L35 75 L35 85 L25 75 Z' fill='url(%23greyGrad)' transform='translate(5, -5)'/%3E%3Crect x='40' y='60' width='40' height='20' fill='url(%23greyGrad)'/%3E%3C/svg%3E");
 }
@@ -693,7 +850,6 @@ input[type="range"] {
 
 /* Realistic Eyedropper Icon & Cursor */
 /* White outline, colorful pixels */
-#eyedropperTool,
 .eyedropper-cursor {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M75 25 L85 35 L45 75 L35 65 Z'/%3E%3Cpath d='M40 70 L30 80 L20 70 L30 60 Z'/%3E%3Ccircle cx='80' cy='30' r='5' fill='white' stroke='none'/%3E%3Crect x='15' y='80' width='10' height='10' fill='%23FF0000' stroke='none'/%3E%3Crect x='25' y='80' width='10' height='10' fill='%2300FF00' stroke='none'/%3E%3Crect x='15' y='90' width='10' height='10' fill='%230000FF' stroke='none'/%3E%3Crect x='25' y='90' width='10' height='10' fill='%23FFFF00' stroke='none'/%3E%3C/svg%3E");
 }
@@ -701,4 +857,3 @@ input[type="range"] {
 .eyedropper-cursor {
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 100 100' fill='none' stroke='%23FFFFFF' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cfilter id='s' x='0' y='0' width='200%25' height='200%25'%3E%3CfeDropShadow dx='1' dy='1' stdDeviation='1' flood-opacity='0.5'/%3E%3C/filter%3E%3Cg filter='url(%23s)'%3E%3Cpath d='M75 25 L85 35 L45 75 L35 65 Z' fill='%23333'/%3E%3Cpath d='M35 65 L25 75 L35 85 L45 75 Z' fill='%23FFFFFF'/%3E%3C/g%3E%3C/svg%3E") 0 100, copy;
 }
-

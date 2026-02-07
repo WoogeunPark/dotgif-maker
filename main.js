@@ -104,10 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateFrameIndicator() {
-    frameIndicator.textContent = `${currentFrameIndex + 1} / ${frames.length}`;
+    if (frameIndicator) {
+      frameIndicator.textContent = `${currentFrameIndex + 1} / ${frames.length}`;
+    }
     if (history[currentFrameIndex]) {
       updateUndoRedoButtons();
     }
+    renderFrameThumbnails(); // Ensure UI stays in sync
   }
 
   function applyCanvasSize(newWidth, newHeight) {
@@ -148,8 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
     recentColors = recentColors.filter(c => c.toLowerCase() !== color.toLowerCase());
     recentColors.unshift(color);
 
-    // Limit to 4 colors
-    if (recentColors.length > 4) {
+    // Limit to 10 colors
+    if (recentColors.length > 10) {
       recentColors.pop();
     }
 
@@ -323,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
     offCanvas.width = COLS;  // Resize exactly to grid dimensions
     offCanvas.height = ROWS;
     const offCtx = offCanvas.getContext('2d');
-    
+
     // Draw image stretched to fit grid (simple pixelation)
     // To maintain aspect ratio and crop, we'd need more complex logic.
     // Given "crops to canvas supported size", fitting to dimensions is a good start.
@@ -349,15 +352,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Simple hex conversion
         if (alpha < 128) {
-             frames[currentFrameIndex][r][c] = BACKGROUND_COLOR; // Transparent-ish
+          frames[currentFrameIndex][r][c] = BACKGROUND_COLOR; // Transparent-ish
         } else {
-             frames[currentFrameIndex][r][c] = rgbToHex(red, green, blue);
+          frames[currentFrameIndex][r][c] = rgbToHex(red, green, blue);
         }
       }
     }
-    
+
     drawGrid();
-    
+
     // Reset file input so same file can be selected again
     imageUpload.value = '';
   }
@@ -427,6 +430,78 @@ document.addEventListener('DOMContentLoaded', () => {
     drawGrid();
   }
 
+  // --- Frame Thumbnails ---
+  function renderFrameThumbnails() {
+    const frameList = document.getElementById('frameList');
+    if (!frameList) return;
+    frameList.innerHTML = '';
+
+    frames.forEach((frameGrid, index) => {
+      const frameItem = document.createElement('div');
+      frameItem.className = `frame-item ${index === currentFrameIndex ? 'active' : ''}`;
+      frameItem.onclick = () => {
+        currentFrameIndex = index;
+        drawGrid();
+        renderFrameThumbnails(); // Update active state
+      };
+
+      const frameNum = document.createElement('span');
+      frameNum.className = 'frame-number';
+      frameNum.textContent = index + 1;
+
+      const thumbCanvas = document.createElement('canvas');
+      thumbCanvas.className = 'frame-thumbnail';
+      thumbCanvas.width = COLS;
+      thumbCanvas.height = ROWS;
+      const thumbCtx = thumbCanvas.getContext('2d');
+
+      // Draw thumbnail
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          thumbCtx.fillStyle = frameGrid[r][c];
+          thumbCtx.fillRect(c, r, 1, 1);
+        }
+      }
+
+      frameItem.appendChild(frameNum);
+      frameItem.appendChild(thumbCanvas);
+      frameList.appendChild(frameItem);
+    });
+
+    // Update count in header
+    const frameCountSpan = document.getElementById('frameCount');
+    if (frameCountSpan) frameCountSpan.textContent = frames.length;
+  }
+
+  // Hook into drawGrid to update thumbnails when drawing changes
+  const originalDrawGrid = drawGrid;
+  drawGrid = function () {
+    // Call original
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const currentGrid = frames[currentFrameIndex];
+    if (!currentGrid) return;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        ctx.fillStyle = currentGrid[r][c];
+        ctx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+      }
+    }
+    // Update UI
+    // We only need to redraw the current thumbnail, but full re-render is safer/easier for now
+    // Debouncing could be added later if performance suffers
+    renderFrameThumbnails();
+  };
+
+  // Override internal function reference
+  // Note: Since drawGrid was defined as function declaration, we can't easily overwrite it 
+  // without changing how it's called or defined. 
+  // simpler approach: explicit update in mouseup
+
+  canvas.addEventListener('mouseup', () => {
+    isDrawing = false;
+    renderFrameThumbnails(); // Update visual on release
+  });
+
   addFrameBtn.addEventListener('click', () => {
     console.log('Add Frame button clicked.');
     const newGrid = JSON.parse(JSON.stringify(frames[currentFrameIndex]));
@@ -435,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
     history.splice(currentFrameIndex + 1, 0, newHistory);
     historyIndex.splice(currentFrameIndex + 1, 0, 0);
     currentFrameIndex++;
-    updateFrameIndicator();
+    // updateFrameIndicator(); // Removed
     drawGrid();
     saveState();
   });
@@ -448,28 +523,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentFrameIndex >= frames.length) {
         currentFrameIndex = frames.length - 1;
       }
-      updateFrameIndicator();
+      // updateFrameIndicator(); // Removed
       drawGrid();
     } else {
       alert('Cannot delete the last frame!');
     }
   });
 
-  prevFrameBtn.addEventListener('click', () => {
-    if (currentFrameIndex > 0) {
-      currentFrameIndex--;
-      updateFrameIndicator();
-      drawGrid();
-    }
-  });
-
-  nextFrameBtn.addEventListener('click', () => {
-    if (currentFrameIndex < frames.length - 1) {
-      currentFrameIndex++;
-      updateFrameIndicator();
-      drawGrid();
-    }
-  });
+  // Removed Prev/Next Frame Buttons Listeners since they are gone from UI
 
 
   const previewOverlay = document.getElementById('gifPreviewOverlay');
@@ -602,4 +663,5 @@ document.addEventListener('DOMContentLoaded', () => {
   setActiveToolButton('pen');
   paletteColors = document.querySelectorAll('.palette-color');
   setActivePaletteColor(currentColor);
+  renderFrameThumbnails();
 });
