@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dot GIF Maker | Premium Pixel Art Editor</title>
-  <link href='/style.css?v=14' rel='stylesheet'>
+  <link href='/style.css?v=19' rel='stylesheet'>
 </head>
 
 <body>
@@ -15,33 +15,7 @@
         <h1>Dot GIF Maker</h1>
       </div>
 
-      <div class="header-center">
-        <!-- Canvas Size -->
-        <div class="header-control-group">
-          <label class="header-label">Size</label>
-          <select id="canvasSizeSelect">
-            <option value="32x32">32x32</option>
-            <option value="64x64">64x64</option>
-            <option value="80x80">80x80</option>
-            <option value="custom">Custom</option>
-          </select>
-          <div class="custom-size-inputs inline">
-            <input type="number" id="customWidth" placeholder="W" value="320" min="10" max="800" disabled>
-            <input type="number" id="customHeight" placeholder="H" value="320" min="10" max="800" disabled>
-          </div>
-        </div>
-
-        <!-- Grid Opacity -->
-        <div class="header-control-group">
-          <label class="header-label">Grid <span id="gridOpacityValue">0.4</span></label>
-          <input type="range" id="gridOpacitySlider" min="0" max="1" step="0.1" value="0.4">
-        </div>
-      </div>
-
-      <div class="header-right">
-        <button id="undoBtn" title="Undo">Undo</button>
-        <button id="redoBtn" title="Redo">Redo</button>
-      </div>
+      <!-- Controls moved to Right Sidebar -->
     </header>
 
     <div class="main-layout">
@@ -132,6 +106,20 @@
           </div>
         </div>
 
+        <!-- Selection & Copy/Paste Tools -->
+        <div class="tool-section">
+          <label class="tool-setting">Region</label>
+          <div class="tool-row threaded-layout">
+            <button id="selectTool" class="tool-btn" title="Select Region">
+              <span class="btn-icon">⛶</span>
+            </button>
+            <div class="action-group inline">
+              <button id="copyBtn" class="action-btn small" title="Copy Selection" disabled>Copy</button>
+              <button id="pasteBtn" class="action-btn small" title="Paste" disabled>Paste</button>
+            </div>
+          </div>
+        </div>
+
         <div class="sidebar-footer">
           <button id="clearFrame" class="secondary">Clear Canvas</button>
         </div>
@@ -139,11 +127,44 @@
 
       <!-- Main Editor: Canvas -->
       <main>
+        <div class="canvas-actions-overlay">
+          <button id="undoBtn" class="icon-action-btn" title="Undo"></button>
+          <button id="redoBtn" class="icon-action-btn" title="Redo"></button>
+        </div>
         <canvas id="dotCanvas" width="320" height="320"></canvas>
       </main>
 
       <!-- Right Sidebar: Frames & Actions -->
       <aside class="panel right-sidebar">
+        <!-- Canvas & Grid Settings -->
+        <div class="tool-section full-width">
+          <label class="tool-setting">Canvas Settings</label>
+
+          <!-- Size Control -->
+          <div class="setting-row">
+            <label class="sub-label">Size</label>
+            <div class="size-controls-group">
+              <select id="canvasSizeSelect">
+                <option value="32x32">32x32</option>
+                <option value="64x64">64x64</option>
+                <option value="80x80">80x80</option>
+                <option value="custom">Custom</option>
+              </select>
+              <div class="custom-size-inputs inline">
+                <input type="number" id="customWidth" placeholder="W" value="320" min="10" max="800" disabled>
+                <input type="number" id="customHeight" placeholder="H" value="320" min="10" max="800" disabled>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid Opacity -->
+          <div class="setting-row">
+            <label class="sub-label">Grid Opacity <span id="gridOpacityValue"
+                style="float:right; color:var(--accent);">0.4</span></label>
+            <input type="range" id="gridOpacitySlider" min="0" max="1" step="0.1" value="0.4" style="width: 100%;">
+          </div>
+        </div>
+
         <!-- Import Image Section -->
         <div class="tool-section full-width">
           <label class="tool-setting">Import Reference</label>

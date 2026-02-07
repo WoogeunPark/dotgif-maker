@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const colorModeToggle = document.getElementById('colorModeToggle');
   const colorSelectionContainer = document.querySelector('.color-selection');
   const colorPalette = document.querySelector('.color-palette');
+  const selectToolBtn = document.getElementById('selectTool');
+  const copyBtn = document.getElementById('copyBtn');
+  const pasteBtn = document.getElementById('pasteBtn');
   let paletteColors;
   let recentColors = [];
 
@@ -45,6 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentTool = 'pen';
   let currentPenThickness = 1;
   let currentEraserThickness = 1;
+  // Selection & Clipboard State
+  let isSelecting = false;
+  let selectionSet = new Set(); // Stores "row,col" strings
+  let clipboard = null;         // Array of {rOffset, cOffset, color}
+  let isPasting = false;
+  let pastePreviewPos = null;   // {r, c}
 
   const BACKGROUND_COLOR = '#FFFFFF';
 
@@ -123,6 +132,37 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.moveTo(0, y);
       ctx.lineTo(canvas.width, y);
       ctx.stroke();
+    }
+
+    // Draw Freeform Selection Overlay
+    if (selectionSet.size > 0) {
+      ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; // Neon Cyan for high visibility
+      selectionSet.forEach(key => {
+        const [r, c] = key.split(',').map(Number);
+        ctx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+      });
+    }
+
+    // Draw Paste Preview
+    if (isPasting && clipboard && pastePreviewPos) {
+      const startR = pastePreviewPos.r;
+      const startC = pastePreviewPos.c;
+
+      ctx.save();
+      ctx.globalAlpha = 0.7; // Slightly more opaque for visibility
+      clipboard.forEach(pixel => {
+        const targetR = startR + pixel.rOffset;
+        const targetC = startC + pixel.cOffset;
+        if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
+          ctx.fillStyle = pixel.color;
+          ctx.fillRect(targetC * PIXEL_SIZE, targetR * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+          // Highlight preview border
+          ctx.strokeStyle = '#00FF00'; // Neon Green
+          ctx.lineWidth = 1;
+          ctx.strokeRect(targetC * PIXEL_SIZE, targetR * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+        }
+      });
+      ctx.restore();
     }
   }
 
@@ -395,6 +435,108 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize UI
   setActiveToolButton('pen');
 
+  // Tool Selection
+  selectToolBtn.addEventListener('click', () => {
+    currentTool = 'select';
+    setActiveToolButton('select');
+    isPasting = false;
+    drawGrid();
+  });
+
+  function setActiveToolButton(tool) {
+    // Reset states
+    penToolBtn.classList.remove('active');
+    eraserToolBtn.classList.remove('active');
+    eyedropperToolBtn.classList.remove('active');
+    selectToolBtn.classList.remove('active');
+
+    // Disable selection if moving away
+    if (tool !== 'select') {
+      if (tool !== 'pen' || !isPasting) { // Allow switching to pen if pasting
+        isPasting = false;
+        clipboard = null;
+        pasteBtn.disabled = true;
+      }
+      if (tool !== 'select') {
+        selectionSet.clear();
+        copyBtn.disabled = true;
+      }
+      drawGrid();
+    }
+
+    if (tool === 'pen') penToolBtn.classList.add('active');
+    else if (tool === 'eraser') eraserToolBtn.classList.add('active');
+    else if (tool === 'eyedropper') eyedropperToolBtn.classList.add('active');
+    else if (tool === 'select') selectToolBtn.classList.add('active');
+  }
+
+  copyBtn.addEventListener('click', copySelection);
+
+  pasteBtn.addEventListener('click', () => {
+    if (clipboard) {
+      isPasting = true;
+      currentTool = 'pen'; // Switch to pen logic for placement mostly, or custom
+      setActiveToolButton('select');
+      document.body.style.cursor = 'crosshair';
+    }
+  });
+
+  function copySelection() {
+    if (selectionSet.size === 0) return;
+
+    // Find bounds to normalize coordinates
+    let minR = Infinity, minC = Infinity;
+    selectionSet.forEach(key => {
+      const [r, c] = key.split(',').map(Number);
+      if (r < minR) minR = r;
+      if (c < minC) minC = c;
+    });
+
+    clipboard = [];
+    selectionSet.forEach(key => {
+      const [r, c] = key.split(',').map(Number);
+      const color = frames[currentFrameIndex][r][c];
+      clipboard.push({
+        rOffset: r - minR,
+        cOffset: c - minC,
+        color: color
+      });
+    });
+
+    pasteBtn.disabled = false;
+    alert('Region copied to clipboard!');
+  }
+
+  function cancelPaste() {
+    if (isPasting) {
+      isPasting = false;
+      pastePreviewPos = null;
+      drawGrid();
+      document.body.style.cursor = 'default';
+    }
+    // Also clear selection if ESC
+    if (selectionSet.size > 0) {
+      selectionSet.clear();
+      copyBtn.disabled = true;
+      drawGrid();
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      cancelPaste();
+    }
+  });
+
+  // Cancel on background click (simplified)
+  document.body.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('canvas') && !e.target.closest('.tool-btn') && !e.target.closest('.action-btn')) {
+      cancelPaste();
+    }
+  });
+
+
+
   canvas.addEventListener('mousedown', (e) => {
     isDrawing = true;
     if (currentTool !== 'eyedropper') {
@@ -452,6 +594,91 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     drawGrid();
   }
+
+
+
+  canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const col = Math.floor(x / PIXEL_SIZE);
+    const row = Math.floor(y / PIXEL_SIZE);
+
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+
+    if (isPasting && clipboard) {
+      saveState();
+      // Commit paste (sparse)
+      clipboard.forEach(pixel => {
+        const targetR = row + pixel.rOffset;
+        const targetC = col + pixel.cOffset;
+        if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
+          if (pixel.color !== BACKGROUND_COLOR) {
+            frames[currentFrameIndex][targetR][targetC] = pixel.color;
+          } else {
+            frames[currentFrameIndex][targetR][targetC] = pixel.color;
+          }
+        }
+      });
+      drawGrid();
+      return;
+    }
+
+    if (currentTool === 'select') {
+      isSelecting = true;
+      const key = `${row},${col}`;
+      if (!selectionSet.has(key)) {
+        selectionSet.add(key);
+      } else {
+        selectionSet.delete(key);
+      }
+      copyBtn.disabled = selectionSet.size === 0;
+      drawGrid();
+      return;
+    }
+
+    isDrawing = true;
+    if (currentTool !== 'eyedropper') {
+      saveState();
+      addToRecentColors(currentColor);
+    }
+    drawPixel(e);
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const col = Math.floor(x / PIXEL_SIZE);
+    const row = Math.floor(y / PIXEL_SIZE);
+
+    if (isPasting && clipboard) {
+      pastePreviewPos = { r: row, c: col };
+      drawGrid();
+      return;
+    }
+
+    if (isSelecting && currentTool === 'select') {
+      if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+        const key = `${row},${col}`;
+        selectionSet.add(key);
+        copyBtn.disabled = false;
+        drawGrid();
+      }
+      return;
+    }
+
+    if (isDrawing && currentTool !== 'eyedropper') {
+      drawPixel(e);
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    if (isSelecting) {
+      isSelecting = false;
+    }
+    isDrawing = false;
+  });
 
   // --- Frame Thumbnails ---
   function renderFrameThumbnails() {

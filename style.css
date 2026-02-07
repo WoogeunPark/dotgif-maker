@@ -59,31 +59,81 @@ body {
   letter-spacing: -0.5px;
 }
 
-.header-center {
+/* Canvas Overlay Actions */
+.canvas-actions-overlay {
+  position: absolute;
+  top: 20px;
+  right: 20px;
   display: flex;
-  gap: 24px;
-  align-items: center;
+  gap: 8px;
+  z-index: 10;
 }
 
-.header-control-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
+.icon-action-btn {
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
 }
 
-.header-label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-weight: 500;
+.icon-action-btn:hover {
+  background-color: var(--bg-panel);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.header-right {
+.icon-action-btn:active {
+  transform: translateY(0);
+}
+
+#undoBtn {
+  background-image: url("/assets/undo.svg");
+}
+
+#redoBtn {
+  background-image: url("/assets/redo.svg");
+}
+
+/* Sidebar Settings Styles */
+.setting-row {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sub-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.size-controls-group {
+  display: flex;
+  gap: 8px;
+}
+
+.size-controls-group select {
+  flex: 1;
+  width: 100%;
+}
+
+.custom-size-inputs.inline {
+  display: flex;
+  gap: 4px;
+}
+
+.custom-size-inputs.inline input {
+  width: 50px;
+  padding: 4px;
+  text-align: center;
 }
 
 /* Main Layout Area below header */
@@ -527,6 +577,36 @@ button:disabled {
   display: flex;
   gap: 4px;
   margin-left: auto;
+}
+
+.thickness-options.import-controls input[type="file"] {
+  display: none;
+}
+
+/* Selection Tool Styles */
+.btn-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.action-btn.small {
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  min-width: auto;
+}
+
+.tool-btn.active {
+  background-color: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* Selection Box Overlay */
+.selection-overlay {
+  pointer-events: none;
+  border: 1px dashed white;
+  background-color: rgba(255, 255, 255, 0.2);
+  position: absolute;
 }
 
 .thickness-options.inline input[type="radio"] {
