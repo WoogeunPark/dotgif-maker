@@ -100,7 +100,29 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
       }
     }
-    console.log('drawGrid finished drawing pixels.');
+
+    // Draw faint grid
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'; // Significantly darker
+    ctx.lineWidth = 1;
+
+    // Vertical lines
+    for (let c = 1; c < COLS; c++) {
+      ctx.beginPath();
+      // Add 0.5 to center the 1px line on the pixel grid for sharpness
+      const x = c * PIXEL_SIZE + 0.5;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+
+    // Horizontal lines
+    for (let r = 1; r < ROWS; r++) {
+      ctx.beginPath();
+      const y = r * PIXEL_SIZE + 0.5;
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
   }
 
   function updateFrameIndicator() {
@@ -476,19 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Hook into drawGrid to update thumbnails when drawing changes
   const originalDrawGrid = drawGrid;
   drawGrid = function () {
-    // Call original
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const currentGrid = frames[currentFrameIndex];
-    if (!currentGrid) return;
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        ctx.fillStyle = currentGrid[r][c];
-        ctx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
-      }
-    }
-    // Update UI
-    // We only need to redraw the current thumbnail, but full re-render is safer/easier for now
-    // Debouncing could be added later if performance suffers
+    originalDrawGrid();
     renderFrameThumbnails();
   };
 
