@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const PIXEL_SIZE = 10;
   let COLS = canvas.width / PIXEL_SIZE;
   let ROWS = canvas.height / PIXEL_SIZE;
+  const BACKGROUND_COLOR = 'transparent';
 
   let currentColor = colorPicker.value;
   let isDrawing = false;
@@ -74,7 +75,126 @@ document.addEventListener('DOMContentLoaded', () => {
     return inside;
   }
 
-  const BACKGROUND_COLOR = '#FFFFFF';
+  // Zoom & Pan State
+  let zoomLevel = 1.0;
+  let panX = 0;
+  let panY = 0;
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 10.0; // Increased max zoom for pixel art
+  const ZOOM_STEP = 0.1;
+
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  const zoomResetBtn = document.getElementById('zoomResetBtn');
+  const zoomLevelDisplay = document.getElementById('zoomLevelDisplay');
+  const canvasWrapper = document.querySelector('.canvas-wrapper');
+
+  function updateTransform() {
+    zoomLevelDisplay.textContent = Math.round(zoomLevel * 100) + '%';
+    // Use translate + scale to handle pan and zoom
+    // Ensure transform-origin is center (default in CSS) or 0 0 if we managed pan manually?
+    // We will rely on CSS transform-origin: center center; and calculate pan offset from center.
+    canvasWrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+
+    // Optional: Update margin/layout if needed, but translate is usually sufficient for visual zoom
+  }
+
+  function handleZoom(delta, clientX, clientY) {
+    const oldZoom = zoomLevel;
+    let newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel + delta));
+
+    if (newZoom === oldZoom) return;
+
+    // Calculate mouse position relative to the center of the viewport/wrapper
+    // This allows us to zoom towards the mouse cursor
+    if (clientX !== undefined && clientY !== undefined) {
+      const rect = canvasWrapper.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      // Mouse offset from center, in *current* scale units
+      // We want this offset to stay constant relative to the screen, 
+      // implying the 'world' point moves away/towards center.
+      // Correction: We need to adjust panX/panY.
+
+      // Formula: 
+      // The point under cursor in "world space" (relative to center, unscaled) is:
+      // worldX = (clientX - centerX) / oldZoom
+      // worldY = (clientY - centerY) / oldZoom
+
+      // After zoom, we want that same world point to be at clientX, clientY.
+      // newCenterX + worldX * newZoom = clientX
+      // (rect.left + width/2) is the *visual* center including pan? 
+      // No, rect includes transform.
+
+      // Let's us basic principle: 
+      // Shift pan to compensate for the Zoom step towards mouse.
+      // Offset from center:
+      const offsetX = clientX - centerX;
+      const offsetY = clientY - centerY;
+
+      // We want to move the image so that the point under cursor remains.
+      // Change in scale causes a shift of position = offset * (change ratio)?
+      // panX -= (mouseX in local) * (scaleDiff)
+
+      // Let's try:
+      // panX -= (offsetX / oldZoom) * (newZoom - oldZoom);
+      // panY -= (offsetY / oldZoom) * (newZoom - oldZoom);
+
+      // Wait, rect.center IS the center of the Transformed element. 
+      // If we use wrapper.parentElement center (viewport center):
+      const containerRect = canvasWrapper.parentElement.getBoundingClientRect();
+      const viewCenterX = containerRect.left + containerRect.width / 2;
+      const viewCenterY = containerRect.top + containerRect.height / 2;
+
+      const mouseXFromCenter = clientX - viewCenterX - panX; // Mouse pos relative to current panned center
+      const mouseYFromCenter = clientY - viewCenterY - panY;
+
+      // Logic:
+      // The pixel under mouse is at `mouseXFromCenter / oldZoom`.
+      // We want it to be at `mouseXFromCenter / newZoom` ? No.
+      // We want the new panX such that:
+      // (PixelWorldX * newZoom) + newPanX = ClientOffsetFromViewCenter
+
+      // PixelWorldX = (clientX - (viewCenterX + panX)) / oldZoom
+      // ClientOffset = clientX - viewCenterX
+
+      // ( (clientX - viewCenterX - panX) / oldZoom ) * newZoom + newPanX = clientX - viewCenterX
+      // Let K = (clientX - viewCenterX)
+      // ( (K - panX) / oldZoom ) * newZoom + newPanX = K
+      // (K - panX) * (newZoom/oldZoom) = K - newPanX
+      // newPanX = K - (K - panX) * (newZoom/oldZoom)
+
+      const Kx = clientX - viewCenterX;
+      const Ky = clientY - viewCenterY;
+      const scaleRatio = newZoom / oldZoom;
+
+      panX = Kx - (Kx - panX) * scaleRatio;
+      panY = Ky - (Ky - panY) * scaleRatio;
+    }
+
+    zoomLevel = newZoom;
+    updateTransform();
+  }
+
+  // Wheel Zoom Listener
+  canvasWrapper.parentElement.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey || true) { // Always zoom on wheel inside canvas area? User asked for magnifying glass.
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      handleZoom(delta, e.clientX, e.clientY);
+    }
+  }, { passive: false });
+
+  zoomInBtn.addEventListener('click', () => handleZoom(ZOOM_STEP)); // Center zoom if no coords
+  zoomOutBtn.addEventListener('click', () => handleZoom(-ZOOM_STEP));
+  zoomResetBtn.addEventListener('click', () => {
+    zoomLevel = 1.0;
+    panX = 0;
+    panY = 0;
+    updateTransform();
+  });
+
 
   // --- History Management ---
   function saveState() {
@@ -227,8 +347,21 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyCanvasSize(newWidth, newHeight) {
     canvas.width = newWidth;
     canvas.height = newHeight;
-    COLS = canvas.width / PIXEL_SIZE;
-    ROWS = canvas.height / PIXEL_SIZE;
+    COLS = newWidth / PIXEL_SIZE;
+    ROWS = newHeight / PIXEL_SIZE;
+
+    // Fix: Resize and clear grid canvas too
+    const gridCanvas = document.getElementById('gridCanvas');
+    if (gridCanvas) {
+      gridCanvas.width = newWidth;
+      gridCanvas.height = newHeight;
+      const gCtx = gridCanvas.getContext('2d');
+      gCtx.clearRect(0, 0, newWidth, newHeight);
+    }
+
+    // Reset Zoom/Pan on resize?
+    // panX = 0; panY = 0; zoomLevel = 1.0; updateTransform();
+
     const initialGrid = createGrid(COLS, ROWS);
     frames = [JSON.parse(JSON.stringify(initialGrid))];
     history = [[JSON.parse(JSON.stringify(initialGrid))]];
@@ -539,12 +672,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Identify pixels inside polygon
     const selectedPixels = [];
     let minR = Infinity, minC = Infinity;
+    let maxR = -Infinity, maxC = -Infinity;
 
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (isPixelInPolygon(r, c, selectionPath)) {
           if (r < minR) minR = r;
           if (c < minC) minC = c;
+          if (r > maxR) maxR = r;
+          if (c > maxC) maxC = c;
           selectedPixels.push({ r, c, color: frames[currentFrameIndex][r][c] });
         }
       }
@@ -555,14 +691,69 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    clipboard = selectedPixels.map(p => ({
+    const clipboardData = selectedPixels.map(p => ({
       rOffset: p.r - minR,
       cOffset: p.c - minC,
       color: p.color
     }));
 
+    // Create Thumbnail
+    const width = maxC - minC + 1;
+    const height = maxR - minR + 1;
+    const tCanvas = document.createElement('canvas');
+    const tSize = 5; // Small pixel size for thumb
+    tCanvas.width = width * tSize;
+    tCanvas.height = height * tSize;
+    const tCtx = tCanvas.getContext('2d');
+
+    selectedPixels.forEach(p => {
+      tCtx.fillStyle = p.color;
+      tCtx.fillRect((p.c - minC) * tSize, (p.r - minR) * tSize, tSize, tSize);
+    });
+
+    // Add to History
+    clipboardHistory.unshift({
+      id: Date.now(),
+      data: clipboardData,
+      thumbnail: tCanvas.toDataURL()
+    });
+
+    if (clipboardHistory.length > MAX_CLIPBOARD_HISTORY) {
+      clipboardHistory.pop();
+    }
+
+    // Auto-select new item
+    activeClipboardIndex = 0;
+    clipboard = clipboardData;
     pasteBtn.disabled = false;
-    // alert('Region copied to clipboard!'); // Optional feedback
+
+    renderClipboardHistory();
+    // alert('Region copied!'); 
+  }
+
+  function renderClipboardHistory() {
+    if (!clipboardList) return;
+    clipboardList.innerHTML = '';
+    if (clipboardHistory.length === 0) {
+      clipboardList.innerHTML = '<div class="empty-message">No items</div>';
+      return;
+    }
+
+    clipboardHistory.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = `clipboard-item ${index === activeClipboardIndex ? 'active' : ''}`;
+      div.innerHTML = `<img src="${item.thumbnail}" />`;
+      div.onclick = () => {
+        activeClipboardIndex = index;
+        clipboard = item.data;
+        pasteBtn.disabled = false;
+        renderClipboardHistory(); // Update active class
+
+        // Trigger paste mode immediately for convenience
+        pasteBtn.click();
+      };
+      clipboardList.appendChild(div);
+    });
   }
 
   function cancelPaste() {
@@ -596,17 +787,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Prevent default drag behavior (Avoids ghost image on pan)
+  canvas.addEventListener('dragstart', (e) => {
+    e.preventDefault();
+  });
 
+
+
+  let isPanning = false;
+  let panStartX = 0;
+  let panStartY = 0;
+
+  function getGridCoordinates(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    // Relative position in visual pixels
+    const relativeX = e.clientX - rect.left;
+    const relativeY = e.clientY - rect.top;
+
+    // Scale back to internal canvas resolution
+    const x = relativeX * scaleX;
+    const y = relativeY * scaleY;
+
+    return {
+      col: Math.floor(x / PIXEL_SIZE),
+      row: Math.floor(y / PIXEL_SIZE)
+    };
+  }
 
   canvas.addEventListener('mousedown', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Middle Mouse Button (Pan)
+    if (e.button === 1) {
+      isPanning = true;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      e.preventDefault(); // Prevent default scroll/paste behavior
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+
+    const { col, row } = getGridCoordinates(e);
 
     // Pixel coordinates for Drawing/Pasting
-    const col = Math.floor(x / PIXEL_SIZE);
-    const row = Math.floor(y / PIXEL_SIZE);
-
     if (isPasting && clipboard) {
       if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
       saveState();
@@ -623,13 +847,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (currentTool === 'select') {
-      // Logic for Lasso/Polygon Selection
-      // 1. Snap to nearest vertex (intersection)
-      const vR = Math.round(y / PIXEL_SIZE);
-      const vC = Math.round(x / PIXEL_SIZE);
+      const vR = Math.round(row); // Use integers for grid snapping
+      const vC = Math.round(col);
 
       if (isSelectionClosed) {
-        // If closed, clicking implies starting fresh
         selectionPath = [{ r: vR, c: vC }];
         isSelectionClosed = false;
         copyBtn.disabled = true;
@@ -637,25 +858,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // If starting new
       if (selectionPath.length === 0) {
         selectionPath.push({ r: vR, c: vC });
         drawGrid();
         return;
       }
 
-      // If paths exist, check if closing loop
       const start = selectionPath[0];
-      // Distance check? Or just exact equality? Grid snap makes exact equality easiest.
       if (start.r === vR && start.c === vC) {
         if (selectionPath.length >= 3) {
           isSelectionClosed = true;
           copyBtn.disabled = false;
-        } else {
-          // Not enough points
         }
       } else {
-        // Add point
         selectionPath.push({ r: vR, c: vC });
       }
       drawGrid();
@@ -673,13 +888,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   canvas.addEventListener('mousemove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    if (isPanning) {
+      const dx = e.clientX - panStartX;
+      const dy = e.clientY - panStartY;
+      panX += dx;
+      panY += dy;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      updateTransform();
+      return;
+    }
 
-    // Pixel Coords
-    const col = Math.floor(x / PIXEL_SIZE);
-    const row = Math.floor(y / PIXEL_SIZE);
+    const { col, row } = getGridCoordinates(e);
 
     if (isPasting && clipboard) {
       pastePreviewPos = { r: row, c: col };
@@ -688,11 +908,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (currentTool === 'select') {
-      // Update preview vertex
       if (!isSelectionClosed) {
-        const vR = Math.round(y / PIXEL_SIZE);
-        const vC = Math.round(x / PIXEL_SIZE);
-        currentMouseVertex = { r: vR, c: vC };
+        currentMouseVertex = { r: row, c: col };
         drawGrid();
       }
       return;
@@ -703,30 +920,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  canvas.addEventListener('mouseup', () => {
-    // For polygon, we click to add points, so modify this if we want drag-to-draw
-    // For now, click-to-point is safer for "lines"
-    isDrawing = false;
-  });
-  canvas.addEventListener('mouseleave', () => {
-    console.log('mouseleave event triggered. isDrawing set to false.');
+  // Handle mouseup for panning and drawing
+  window.addEventListener('mouseup', (e) => {
+    if (isPanning) {
+      isPanning = false;
+      canvas.style.cursor = ''; // Revert to default cursor handling
+      // Optionally update cursor based on tool
+      updateCursor(currentTool);
+    }
     isDrawing = false;
   });
 
+  canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+
   function drawPixel(e) {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const col = Math.floor(x / PIXEL_SIZE);
-    const row = Math.floor(y / PIXEL_SIZE);
+    const { col, row } = getGridCoordinates(e);
 
     if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
 
     if (currentTool === 'eyedropper') {
       const pickedColor = frames[currentFrameIndex][row][col];
-      if (pickedColor && pickedColor !== BACKGROUND_COLOR) {
+      // Ensure we don't pick undefined/null if out of bounds (though guard above handles it)
+      if (pickedColor) {
         updateCurrentColor(pickedColor);
-        // Switch back to pen after picking color
         currentTool = 'pen';
         setActiveToolButton('pen');
       }
@@ -812,17 +1028,30 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFrameThumbnails(); // Update visual on release
   });
 
-  addFrameBtn.addEventListener('click', () => {
-    console.log('Add Frame button clicked.');
-    const newGrid = JSON.parse(JSON.stringify(frames[currentFrameIndex]));
-    frames.splice(currentFrameIndex + 1, 0, newGrid);
-    const newHistory = [JSON.parse(JSON.stringify(newGrid))];
-    history.splice(currentFrameIndex + 1, 0, newHistory);
-    historyIndex.splice(currentFrameIndex + 1, 0, 0);
-    currentFrameIndex++;
+  function addFrame() {
+    console.log('addFrame called.');
+    if (frames.length === 0) {
+      // Recovery if empty
+      frames.push(createGrid(COLS, ROWS));
+      history.push([JSON.parse(JSON.stringify(frames[0]))]);
+      historyIndex.push(0);
+      currentFrameIndex = 0;
+    } else {
+      const newGrid = JSON.parse(JSON.stringify(frames[currentFrameIndex]));
+      frames.splice(currentFrameIndex + 1, 0, newGrid);
+      const newHistory = [JSON.parse(JSON.stringify(newGrid))];
+      history.splice(currentFrameIndex + 1, 0, newHistory);
+      historyIndex.splice(currentFrameIndex + 1, 0, 0);
+      currentFrameIndex++;
+    }
     // updateFrameIndicator(); // Removed
     drawGrid();
     saveState();
+  }
+
+  addFrameBtn.addEventListener('click', () => {
+    console.log('Add Frame button clicked.');
+    addFrame();
   });
 
   deleteFrameBtn.addEventListener('click', () => {
@@ -980,9 +1209,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initial setup
-  applyCanvasSize(parseInt(customWidthInput.value), parseInt(customHeightInput.value));
-  setActiveToolButton('pen');
-  paletteColors = document.querySelectorAll('.palette-color');
-  setActivePaletteColor(currentColor);
-  renderFrameThumbnails();
+  // Initial setup
+  const initialSize = parseInt(canvasSizeSelect.value.split('x')[0]) || 32;
+
+  // Define BACKGROUND_COLOR again if needed, or rely on top level. 
+  // Better: Reset logic
+  function hardReset() {
+    applyCanvasSize(initialSize * PIXEL_SIZE, initialSize * PIXEL_SIZE);
+    if (!frames.length) {
+      console.warn('Frames empty after applyCanvasSize. Forcing init.');
+      frames = [createGrid(initialSize, initialSize)];
+      history = [JSON.parse(JSON.stringify(frames))];
+      historyIndex = [0];
+      currentFrameIndex = 0;
+    }
+    setActiveToolButton('pen');
+    paletteColors = document.querySelectorAll('.palette-color');
+    setActivePaletteColor(currentColor);
+    drawGrid();
+    renderFrameThumbnails();
+  }
+
+  hardReset();
 });

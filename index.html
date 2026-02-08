@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dot GIF Maker | Premium Pixel Art Editor</title>
-  <link href='/style.css?v=19' rel='stylesheet'>
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 
 <body>
@@ -131,7 +131,13 @@
           <button id="undoBtn" class="icon-action-btn" title="Undo"></button>
           <button id="redoBtn" class="icon-action-btn" title="Redo"></button>
         </div>
-        <canvas id="dotCanvas" width="320" height="320"></canvas>
+        <div class="canvas-container">
+          <!-- Zoom controls moved to right sidebar -->
+          <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="dotCanvas" width="320" height="320" draggable="false"></canvas>
+            <canvas id="gridCanvas" width="320" height="320" style="pointer-events: none;" draggable="false"></canvas>
+          </div>
+        </div>
       </main>
 
       <!-- Right Sidebar: Frames & Actions -->
@@ -162,6 +168,17 @@
             <label class="sub-label">Grid Opacity <span id="gridOpacityValue"
                 style="float:right; color:var(--accent);">0.4</span></label>
             <input type="range" id="gridOpacitySlider" min="0" max="1" step="0.1" value="0.4" style="width: 100%;">
+          </div>
+
+          <!-- Zoom Controls -->
+          <div class="setting-row">
+            <label class="sub-label">Zoom</label>
+            <div class="zoom-controls">
+              <button id="zoomOutBtn" title="Zoom Out" class="action-btn">-</button>
+              <span id="zoomLevelDisplay">100%</span>
+              <button id="zoomInBtn" title="Zoom In" class="action-btn">+</button>
+              <button id="zoomResetBtn" title="Reset Zoom" class="action-btn">100%</button>
+            </div>
           </div>
         </div>
 
