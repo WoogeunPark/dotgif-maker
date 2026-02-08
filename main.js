@@ -48,12 +48,31 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentTool = 'pen';
   let currentPenThickness = 1;
   let currentEraserThickness = 1;
-  // Selection & Clipboard State
-  let isSelecting = false;
-  let selectionSet = new Set(); // Stores "row,col" strings
-  let clipboard = null;         // Array of {rOffset, cOffset, color}
+
+  // Lasso Selection State
+  let selectionPath = []; // Array of {r, c}
+  let isSelectionClosed = false;
+  let currentMouseVertex = null;
+
+  let clipboard = null; // Array of {rOffset, cOffset, color}
   let isPasting = false;
-  let pastePreviewPos = null;   // {r, c}
+  let pastePreviewPos = null;
+
+  // Helper: Point in Polygon (Ray Casting)
+  function isPixelInPolygon(r, c, path) {
+    const x = c + 0.5;
+    const y = r + 0.5;
+    let inside = false;
+    for (let i = 0, j = path.length - 1; i < path.length; j = i++) {
+      const xi = path[i].c, yi = path[i].r;
+      const xj = path[j].c, yj = path[j].r;
+
+      const intersect = ((yi > y) !== (yj > y))
+        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
 
   const BACKGROUND_COLOR = '#FFFFFF';
 
@@ -134,13 +153,42 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.stroke();
     }
 
-    // Draw Freeform Selection Overlay
-    if (selectionSet.size > 0) {
-      ctx.fillStyle = 'rgba(0, 255, 255, 0.5)'; // Neon Cyan for high visibility
-      selectionSet.forEach(key => {
-        const [r, c] = key.split(',').map(Number);
-        ctx.fillRect(c * PIXEL_SIZE, r * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
-      });
+    // Draw Lasso Selection
+    if (selectionPath.length > 0) {
+      ctx.save();
+      ctx.beginPath();
+      // Move to first vertex (scaled)
+      ctx.moveTo(selectionPath[0].c * PIXEL_SIZE, selectionPath[0].r * PIXEL_SIZE);
+
+      // Draw lines to subsequent vertices
+      for (let i = 1; i < selectionPath.length; i++) {
+        ctx.lineTo(selectionPath[i].c * PIXEL_SIZE, selectionPath[i].r * PIXEL_SIZE);
+      }
+
+      // If closed, close path and fill
+      if (isSelectionClosed) {
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.3)'; // Semi-transparent Cyan fill
+        ctx.fill();
+        ctx.strokeStyle = 'cyan';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        // If active (not closed), draw line to current mouse position
+        if (currentMouseVertex) {
+          ctx.lineTo(currentMouseVertex.c * PIXEL_SIZE, currentMouseVertex.r * PIXEL_SIZE);
+        }
+        ctx.strokeStyle = 'cyan';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Draw vertices as small dots for visual feedback
+        ctx.fillStyle = 'white';
+        selectionPath.forEach(v => {
+          ctx.fillRect(v.c * PIXEL_SIZE - 2, v.r * PIXEL_SIZE - 2, 4, 4);
+        });
+      }
+      ctx.restore();
     }
 
     // Draw Paste Preview
@@ -458,7 +506,8 @@ document.addEventListener('DOMContentLoaded', () => {
         pasteBtn.disabled = true;
       }
       if (tool !== 'select') {
-        selectionSet.clear();
+        selectionPath = [];
+        isSelectionClosed = false;
         copyBtn.disabled = true;
       }
       drawGrid();
@@ -482,29 +531,38 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function copySelection() {
-    if (selectionSet.size === 0) return;
+    if (!isSelectionClosed || selectionPath.length < 3) {
+      alert("Please close the selection loop first.");
+      return;
+    }
 
-    // Find bounds to normalize coordinates
+    // Identify pixels inside polygon
+    const selectedPixels = [];
     let minR = Infinity, minC = Infinity;
-    selectionSet.forEach(key => {
-      const [r, c] = key.split(',').map(Number);
-      if (r < minR) minR = r;
-      if (c < minC) minC = c;
-    });
 
-    clipboard = [];
-    selectionSet.forEach(key => {
-      const [r, c] = key.split(',').map(Number);
-      const color = frames[currentFrameIndex][r][c];
-      clipboard.push({
-        rOffset: r - minR,
-        cOffset: c - minC,
-        color: color
-      });
-    });
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (isPixelInPolygon(r, c, selectionPath)) {
+          if (r < minR) minR = r;
+          if (c < minC) minC = c;
+          selectedPixels.push({ r, c, color: frames[currentFrameIndex][r][c] });
+        }
+      }
+    }
+
+    if (selectedPixels.length === 0) {
+      alert("No pixels selected.");
+      return;
+    }
+
+    clipboard = selectedPixels.map(p => ({
+      rOffset: p.r - minR,
+      cOffset: p.c - minC,
+      color: p.color
+    }));
 
     pasteBtn.disabled = false;
-    alert('Region copied to clipboard!');
+    // alert('Region copied to clipboard!'); // Optional feedback
   }
 
   function cancelPaste() {
@@ -515,12 +573,15 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.style.cursor = 'default';
     }
     // Also clear selection if ESC
-    if (selectionSet.size > 0) {
-      selectionSet.clear();
+    if (selectionPath.length > 0) {
+      selectionPath = [];
+      isSelectionClosed = false;
       copyBtn.disabled = true;
       drawGrid();
     }
   }
+
+
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -538,6 +599,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Pixel coordinates for Drawing/Pasting
+    const col = Math.floor(x / PIXEL_SIZE);
+    const row = Math.floor(y / PIXEL_SIZE);
+
+    if (isPasting && clipboard) {
+      if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+      saveState();
+      // Commit paste (sparse)
+      clipboard.forEach(pixel => {
+        const targetR = row + pixel.rOffset;
+        const targetC = col + pixel.cOffset;
+        if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
+          frames[currentFrameIndex][targetR][targetC] = pixel.color;
+        }
+      });
+      drawGrid();
+      return;
+    }
+
+    if (currentTool === 'select') {
+      // Logic for Lasso/Polygon Selection
+      // 1. Snap to nearest vertex (intersection)
+      const vR = Math.round(y / PIXEL_SIZE);
+      const vC = Math.round(x / PIXEL_SIZE);
+
+      if (isSelectionClosed) {
+        // If closed, clicking implies starting fresh
+        selectionPath = [{ r: vR, c: vC }];
+        isSelectionClosed = false;
+        copyBtn.disabled = true;
+        drawGrid();
+        return;
+      }
+
+      // If starting new
+      if (selectionPath.length === 0) {
+        selectionPath.push({ r: vR, c: vC });
+        drawGrid();
+        return;
+      }
+
+      // If paths exist, check if closing loop
+      const start = selectionPath[0];
+      // Distance check? Or just exact equality? Grid snap makes exact equality easiest.
+      if (start.r === vR && start.c === vC) {
+        if (selectionPath.length >= 3) {
+          isSelectionClosed = true;
+          copyBtn.disabled = false;
+        } else {
+          // Not enough points
+        }
+      } else {
+        // Add point
+        selectionPath.push({ r: vR, c: vC });
+      }
+      drawGrid();
+      return;
+    }
+
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+
     isDrawing = true;
     if (currentTool !== 'eyedropper') {
       saveState();
@@ -547,12 +673,39 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Pixel Coords
+    const col = Math.floor(x / PIXEL_SIZE);
+    const row = Math.floor(y / PIXEL_SIZE);
+
+    if (isPasting && clipboard) {
+      pastePreviewPos = { r: row, c: col };
+      drawGrid();
+      return;
+    }
+
+    if (currentTool === 'select') {
+      // Update preview vertex
+      if (!isSelectionClosed) {
+        const vR = Math.round(y / PIXEL_SIZE);
+        const vC = Math.round(x / PIXEL_SIZE);
+        currentMouseVertex = { r: vR, c: vC };
+        drawGrid();
+      }
+      return;
+    }
+
     if (isDrawing && currentTool !== 'eyedropper') {
       drawPixel(e);
     }
   });
 
   canvas.addEventListener('mouseup', () => {
+    // For polygon, we click to add points, so modify this if we want drag-to-draw
+    // For now, click-to-point is safer for "lines"
     isDrawing = false;
   });
   canvas.addEventListener('mouseleave', () => {
@@ -597,88 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  canvas.addEventListener('mousedown', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const col = Math.floor(x / PIXEL_SIZE);
-    const row = Math.floor(y / PIXEL_SIZE);
 
-    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
-
-    if (isPasting && clipboard) {
-      saveState();
-      // Commit paste (sparse)
-      clipboard.forEach(pixel => {
-        const targetR = row + pixel.rOffset;
-        const targetC = col + pixel.cOffset;
-        if (targetR >= 0 && targetR < ROWS && targetC >= 0 && targetC < COLS) {
-          if (pixel.color !== BACKGROUND_COLOR) {
-            frames[currentFrameIndex][targetR][targetC] = pixel.color;
-          } else {
-            frames[currentFrameIndex][targetR][targetC] = pixel.color;
-          }
-        }
-      });
-      drawGrid();
-      return;
-    }
-
-    if (currentTool === 'select') {
-      isSelecting = true;
-      const key = `${row},${col}`;
-      if (!selectionSet.has(key)) {
-        selectionSet.add(key);
-      } else {
-        selectionSet.delete(key);
-      }
-      copyBtn.disabled = selectionSet.size === 0;
-      drawGrid();
-      return;
-    }
-
-    isDrawing = true;
-    if (currentTool !== 'eyedropper') {
-      saveState();
-      addToRecentColors(currentColor);
-    }
-    drawPixel(e);
-  });
-
-  canvas.addEventListener('mousemove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const col = Math.floor(x / PIXEL_SIZE);
-    const row = Math.floor(y / PIXEL_SIZE);
-
-    if (isPasting && clipboard) {
-      pastePreviewPos = { r: row, c: col };
-      drawGrid();
-      return;
-    }
-
-    if (isSelecting && currentTool === 'select') {
-      if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-        const key = `${row},${col}`;
-        selectionSet.add(key);
-        copyBtn.disabled = false;
-        drawGrid();
-      }
-      return;
-    }
-
-    if (isDrawing && currentTool !== 'eyedropper') {
-      drawPixel(e);
-    }
-  });
-
-  canvas.addEventListener('mouseup', () => {
-    if (isSelecting) {
-      isSelecting = false;
-    }
-    isDrawing = false;
-  });
 
   // --- Frame Thumbnails ---
   function renderFrameThumbnails() {
